@@ -6,6 +6,7 @@ import seaborn as sns
 
 from statsmodels.formula.api import ols
 from patsy import dmatrix
+from statsmodels.api import WLS, add_constant
 
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
@@ -13,11 +14,12 @@ from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.linear_model import LinearRegression
 from sklearn.inspection import PartialDependenceDisplay
-from statsmodels.formula.api import ols
+from sklearn.decomposition import PCA
+from sklearn.model_selection import cross_val_score
+from sklearn.cluster import KMeans
 
 from itertools import combinations
 from math import ceil
-from statsmodels.api import WLS, add_constant
 
 def analyze_trends(
     csv_path,
@@ -27,13 +29,11 @@ def analyze_trends(
     dropna_required=True,
     use_wls=True
     ):
-  
-    # Load data and infer column names
+
     df = pd.read_csv(csv_path)
     print(f"\nLoaded dataset with {df.shape[0]} rows and {df.shape[1]} columns.")
     print("Columns:", list(df.columns))
 
-    # Handle missing values
     if dropna_required:
         all_needed = input_categoricals + input_numerics + output_targets
         missing_summary = df[all_needed].isnull().sum()
@@ -52,6 +52,36 @@ def analyze_trends(
     X = preprocessor.fit_transform(df[input_cols])
     feature_names = preprocessor.get_feature_names_out()
 
+    # Suggestion 2: Correlation matrix
+    if input_numerics:
+        print("\nCorrelation Matrix of Numeric Inputs:")
+        sns.heatmap(df[input_numerics].corr(), annot=True, cmap="coolwarm")
+        plt.title("Correlation Matrix (Numeric Inputs)")
+        plt.tight_layout()
+        plt.show()
+
+    # Suggestion 4: PCA
+    if X.shape[1] >= 2:
+        pca = PCA()
+        X_pca = pca.fit_transform(X)
+        plt.figure(figsize=(6, 4))
+        plt.plot(np.cumsum(pca.explained_variance_ratio_), marker='o')
+        plt.title("Cumulative Explained Variance (PCA)")
+        plt.xlabel("Number of Components")
+        plt.ylabel("Explained Variance")
+        plt.grid()
+        plt.tight_layout()
+        plt.show()
+
+    # Suggestion 5: Clustering (Categorical one-hot only)
+    if input_categoricals:
+        onehot = OneHotEncoder(sparse_output=False, drop='first')
+        X_cat = onehot.fit_transform(df[input_categoricals])
+        kmeans = KMeans(n_clusters=3, random_state=42).fit(X_cat)
+        df["Cluster"] = kmeans.labels_
+        print("\nCluster Memberships based on Categorical Inputs:")
+        print(df.groupby("Cluster")[output_targets].mean())
+
     for output in output_targets:
         print(f"\n{'='*30}\nAnalyzing output: {output}\n{'='*30}")
         y = df[output]
@@ -60,8 +90,7 @@ def analyze_trends(
         if use_wls:
             stdev_col = output + "Std"
             if stdev_col in df.columns:
-                from statsmodels.api import WLS, add_constant
-                weights = 1.0 / (df[stdev_col]**2 + 1e-6)  # avoid divide-by-zero
+                weights = 1.0 / (df[stdev_col]**2 + 1e-6)
                 X_wls = add_constant(X)
                 model_wls = WLS(y, X_wls, weights=weights).fit()
                 print("\nWeighted Least Squares Regression (WLS):")
@@ -82,6 +111,10 @@ def analyze_trends(
         rf = RandomForestRegressor(n_estimators=200, random_state=42)
         rf.fit(X, y)
         importances = rf.feature_importances_
+
+        # Suggestion 3: Cross-validation
+        scores = cross_val_score(rf, X, y, cv=5, scoring="r2")
+        print(f"\nCross-validated R²: {scores.mean():.3f} ± {scores.std():.3f}")
 
         plt.figure(figsize=(8, 4))
         sns.barplot(x=importances, y=feature_names)
@@ -109,6 +142,14 @@ def analyze_trends(
         plt.xticks(rotation=45, ha='right')
         plt.tight_layout()
         plt.show()
+
+        # Suggestion 7: Top SHAP interactions
+        triu_idx = np.triu_indices_from(mean_interaction, k=1)
+        top_pairs = np.dstack((triu_idx[0], triu_idx[1]))[0]
+        top_sorted = sorted(top_pairs, key=lambda x: mean_interaction[x[0], x[1]], reverse=True)[:5]
+        print("\nTop SHAP Feature Interactions:")
+        for i, j in top_sorted:
+            print(f"{feature_names[i]} × {feature_names[j]}: {mean_interaction[i, j]:.4f}")
 
         # PDP grid
         pdp_targets = [(i,) for i in range(X.shape[1])] + list(combinations(range(X.shape[1]), 2))
@@ -147,17 +188,35 @@ def analyze_trends(
             plt.tight_layout(rect=[0, 0.03, 1, 0.95])
             plt.show()
 
-        # ----- FLEXIBLE ANOVA -----
+        # Residual Analysis
+        residuals = y - rf.predict(X)
+        sns.histplot(residuals, kde=True)
+        plt.title("Residual Distribution")
+        plt.xlabel("Residual")
+        plt.tight_layout()
+        plt.show()
+
+        sns.scatterplot(x=rf.predict(X), y=residuals)
+        plt.axhline(0, linestyle='--', color='gray')
+        plt.title("Residuals vs. Predicted")
+        plt.xlabel("Predicted")
+        plt.ylabel("Residual")
+        plt.tight_layout()
+        plt.show()
+
+        # Flexible ANOVA
         print("\nANOVA: Base model with main effects")
-        terms = []
-        for col in input_categoricals:
-            terms.append(f'C(Q("{col}"))')
-        for col in input_numerics:
-            terms.append(f'Q("{col}")')
+        terms = [f'C(Q("{col}"))' for col in input_categoricals] + [f'Q("{col}")' for col in input_numerics]
         base_formula = f'Q("{output}") ~ ' + " + ".join(terms)
         try:
             model = ols(base_formula, data=df).fit()
             print(model.summary())
+
+            # Suggestion 6: Effect Size (η²)
+            ss_total = np.sum((y - np.mean(y))**2)
+            ss_model = np.sum((model.fittedvalues - np.mean(y))**2)
+            eta_sq = ss_model / ss_total
+            print(f"Effect size η² (model R²): {eta_sq:.3f}")
         except Exception as e:
             print(f"Base ANOVA model failed: {e}")
 
