@@ -204,6 +204,16 @@ def analyze_trends(
         plt.tight_layout()
         plt.show()
 
+        # --- RANKING: Highest Prediction Errors ---
+        error_df = df.copy()
+        error_df["Predicted"] = rf.predict(X)
+        error_df["Residual"] = error_df["Predicted"] - y
+        error_df["AbsError"] = error_df["Residual"].abs()
+
+        print("\nTop 5 Samples with Highest Prediction Error:")
+        top_errors = error_df.sort_values("AbsError", ascending=False).head(5)
+        print(top_errors[[*input_cols, output, "Predicted", "Residual", "AbsError"]])
+
         # Flexible ANOVA
         print("\nANOVA: Base model with main effects")
         terms = [f'C(Q("{col}"))' for col in input_categoricals] + [f'Q("{col}")' for col in input_numerics]
