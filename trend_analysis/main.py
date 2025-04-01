@@ -8,9 +8,6 @@ from trend_analysis.anova import run_anova
 from sklearn.decomposition import PCA
 
 def main(config=None):
-    from config import config as default_config  # fallback
-    if config is None:
-        config = default_config
     df = load_and_clean(
         config["csv_path"],
         config["input_categoricals"] + config["input_numerics"],
