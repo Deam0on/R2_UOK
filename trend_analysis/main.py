@@ -1,10 +1,10 @@
 from config import config
-from preprocess import load_and_clean, build_preprocessor
-from visualization import show_correlation, plot_pca
-from modeling import fit_linear_model, fit_random_forest
-from shap_analysis import explain_shap
-from pdp_analysis import plot_pdp
-from anova import run_anova
+from trend_analysis.preprocess import load_and_clean, build_preprocessor
+from trend_analysis.visualization import show_correlation, plot_pca
+from trend_analysis.modeling import fit_linear_model, fit_random_forest
+from trend_analysis.shap_analysis import explain_shap
+from trend_analysis.pdp_analysis import plot_pdp
+from trend_analysis.anova import run_anova
 from sklearn.decomposition import PCA
 
 def main():
