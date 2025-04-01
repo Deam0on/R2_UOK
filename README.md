@@ -1,4 +1,4 @@
-# 📊 Trend Analysis & Feature Importance Tool
+# Trend Analysis & Feature Importance Tool
 
 A modular, CLI-compatible Python package for exploratory data analysis, regression modeling, feature importance ranking, and SHAP interpretation.
 
