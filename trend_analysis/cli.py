@@ -1,7 +1,7 @@
 import argparse
 import yaml
-from config import config as default_config
-from main import main as run_main
+from trend_analysis.config import config as default_config
+from trend_analysis.main import main as run_main
 
 def load_yaml_config(path):
     with open(path, "r") as f:
