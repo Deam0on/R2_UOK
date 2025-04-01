@@ -2,6 +2,8 @@ pandas
 numpy
 matplotlib
 seaborn
+shap
 scikit-learn
 statsmodels
-shap
+patsy
+pyyaml
