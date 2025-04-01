@@ -1,4 +1,4 @@
-from config import config
+from trend_analysis.config import config
 from trend_analysis.preprocess import load_and_clean, build_preprocessor
 from trend_analysis.visualization import show_correlation, plot_pca
 from trend_analysis.modeling import fit_linear_model, fit_random_forest
