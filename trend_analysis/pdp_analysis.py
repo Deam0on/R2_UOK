@@ -3,8 +3,14 @@ from itertools import combinations
 from math import ceil
 import matplotlib.pyplot as plt
 
-def plot_pdp(rf, X, feature_names, top_idx, significant_only=True):
-    pdp_targets = [(i,) for i in top_idx] + list(combinations(top_idx, 2)) if significant_only else                   [(i,) for i in range(X.shape[1])] + list(combinations(range(X.shape[1]), 2))
+def plot_pdp(rf, X, feature_names, top_idx, significant_only=True, save_plots=False):
+    from sklearn.inspection import PartialDependenceDisplay
+    from itertools import combinations
+    from math import ceil
+    import matplotlib.pyplot as plt
+
+    pdp_targets = [(i,) for i in top_idx] + list(combinations(top_idx, 2)) if significant_only else \
+                  [(i,) for i in range(X.shape[1])] + list(combinations(range(X.shape[1]), 2))
 
     total_plots = len(pdp_targets)
     cols = 3
@@ -19,10 +25,13 @@ def plot_pdp(rf, X, feature_names, top_idx, significant_only=True):
 
         for i, pdp_target in enumerate(pdp_targets[start:end]):
             try:
-                PartialDependenceDisplay.from_estimator(rf, X, [pdp_target],
-                                                        feature_names=feature_names,
-                                                        kind="average", ax=axes[i])
-            except Exception as e:
+                PartialDependenceDisplay.from_estimator(
+                    rf, X, [pdp_target],
+                    feature_names=feature_names,
+                    kind="average",
+                    ax=axes[i]
+                )
+            except Exception:
                 axes[i].set_visible(False)
 
         for ax in axes[end-start:]:
@@ -30,4 +39,8 @@ def plot_pdp(rf, X, feature_names, top_idx, significant_only=True):
 
         plt.suptitle(f"PDP Page {fig_num + 1}")
         plt.tight_layout()
-        plt.show()
+
+        if save_plots:
+            plt.savefig(f"pdp_page_{fig_num + 1}.png")
+        else:
+            plt.show()
