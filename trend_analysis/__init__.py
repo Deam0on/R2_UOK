@@ -1,1 +1,1 @@
-# Init file for trend_analysis package
+# trend_analysis package with humanized outputs
