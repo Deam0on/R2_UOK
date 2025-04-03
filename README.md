@@ -1,80 +1,116 @@
-# Trend Analysis & Feature Importance Tool
+# Trend Analysis and Feature Importance Tool
 
-A modular, CLI-compatible Python package for exploratory data analysis, regression modeling, feature importance ranking, and SHAP interpretation.
-
----
+This is a modular, CLI-compatible Python package for trend analysis, regression modeling, feature importance evaluation, SHAP interpretability, and statistical analysis.
 
 ## Features
 
-- Correlation Matrix and PCA
-- OLS/WLS Regression with p-value filtering
-- Random Forests with Cross-Validation
-- SHAP Value Visualization and Feature Ranking
-- Partial Dependence Plots (1D & 2D)
-- ANOVA with Effect Sizes
-- YAML config support
-- CLI Interface for pipeline control
-- Pip-installable as a Python package
-
----
+- Correlation matrix heatmap and PCA
+- OLS/WLS regression with significance filtering
+- Random Forest regression with cross-validation
+- SHAP value analysis and ranking
+- SHAP interaction heatmaps
+- Partial dependence plots (1D and 2D)
+- ANOVA and 3-way interaction modeling
+- CLI interface for scripted use
+- YAML configuration file support
 
 ## Installation
 
 ### Install from GitHub
+
 ```bash
 pip install git+https://github.com/yourusername/trend_analysis.git
 ```
 
-### Or install locally
+### Install locally from source
+
 ```bash
 git clone https://github.com/yourusername/trend_analysis.git
 cd trend_analysis
 pip install .
 ```
 
----
-
 ## CLI Usage
 
-### Using command-line arguments
+### Minimal example
+
 ```bash
-trend-analysis \
-  --csv /path/to/data.csv \
-  --categoricals "Category 1" "Category 2" \
-  --numerics "Numeric 1" "Numeric 2" \
-  --targets " Output 1" " Output 2"
+trend-analysis --csv path/to/data.csv --categoricals API --numerics Flowrate --targets "Mean size"
 ```
 
-### Using a YAML config
+### Full example
+
+```bash
+trend-analysis \
+  --csv path/to/data.csv \
+  --categoricals API Stabilizers "Mixing chambers" \
+  --numerics Flowrate \
+  --targets "Mean num nm" "Mean vol nm" \
+  --no-dropna \
+  --ols \
+  --all
+```
+
+### Using a YAML configuration
+
 ```bash
 trend-analysis --config config.yaml
 ```
 
----
-
-## YAML Configuration Example
+## YAML Config Example
 
 ```yaml
 csv_path: /content/data/asmodeus.csv
 input_categoricals:
-  - Category 1
-  - Category 2
+  - API
+  - Stabilizers
+  - Mixing chambers
 input_numerics:
-  - Numeric 1
-  - Numeric 2
+  - Flowrate
 output_targets:
-  - Output 1
-  - Output 2
+  - Mean num nm
+  - Mean vol nm
 dropna_required: true
 use_wls: true
 significant_only: true
+save_plots: true
 ```
 
----
+## Available CLI Parameters
 
-## Development
+| Parameter            | Required | Description                                                        |
+|----------------------|----------|--------------------------------------------------------------------|
+| `--csv`              | Yes      | Path to the input CSV file                                         |
+| `--categoricals`     | Yes      | List of categorical input columns                                  |
+| `--numerics`         | Yes      | List of numeric input columns                                      |
+| `--targets`          | Yes      | List of target output variables                                    |
+| `--config`           | No       | Path to YAML configuration file                                    |
+| `--no-dropna`        | No       | Keep rows with missing values                                      |
+| `--ols`              | No       | Use Ordinary Least Squares instead of Weighted Least Squares       |
+| `--all`              | No       | Show all results, not just significant ones                        |
 
-### Project structure
+## Programmatic Usage
+
+You can also import and run the analysis from Python:
+
+```python
+from trend_analysis.config import config
+from trend_analysis.main import main
+
+config["csv_path"] = "/path/to/data.csv"
+main(config)
+```
+
+## Output
+
+- Printed summaries of regression and ANOVA
+- Cross-validated R-squared scores
+- SHAP summaries and feature importances
+- Plots (interactive or saved as PNG)
+- Top interactions and residual diagnostics
+
+## Project Structure
+
 ```
 trend_analysis/
 ├── trend_analysis/
@@ -90,26 +126,13 @@ trend_analysis/
 │   ├── anova.py
 │   └── config.yaml
 ├── setup.py
-└── README.md
+├── README.md
 ```
-
----
-
-## Output
-
-- Terminal-based summaries of model fits, cross-validation, and top features
-- Interactive plots (correlation heatmaps, PCA, SHAP, PDP)
-- Regression and ANOVA summaries with filtering
-- Highlighted feature interactions and residual analysis
-
----
 
 ## License
 
-MIT License
+This project is licensed under the MIT License.
 
----
+## Contributions
 
-## ontributions
-
-Feel free to open issues or submit pull requests for improvements!
+Contributions, issues, and feature requests are welcome. Please open a pull request or submit an issue on GitHub.
