@@ -17,6 +17,7 @@ def parse_args():
     parser.add_argument("--no-dropna", action="store_true", help="Do not drop rows with missing values")
     parser.add_argument("--ols", action="store_true", help="Use ordinary least squares instead of WLS")
     parser.add_argument("--all", action="store_true", help="Show all results, not only significant ones")
+    parser.add_argument("--save-plots", action="store_true", help="Save plots instead of displaying them")
     return parser.parse_args()
 
 def main():
@@ -39,6 +40,7 @@ def main():
         config["use_wls"] = False
     if args.all:
         config["significant_only"] = False
+    config["save_plots"] = args.save_plots
 
     run_main(config)
 
