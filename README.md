@@ -13,6 +13,7 @@ This is a modular, CLI-compatible Python package for trend analysis, regression 
 - ANOVA and 3-way interaction modeling
 - CLI interface for scripted use
 - YAML configuration file support
+- Optional saving of plots to PNG
 
 ## Installation
 
@@ -35,7 +36,7 @@ pip install .
 ### Minimal example
 
 ```bash
-trend-analysis --csv path/to/data.csv --categoricals API --numerics Flowrate --targets "Mean size"
+trend-analysis --csv path/to/data.csv --categoricals Category1 --numerics Numeric1 --targets Target1
 ```
 
 ### Full example
@@ -43,9 +44,9 @@ trend-analysis --csv path/to/data.csv --categoricals API --numerics Flowrate --t
 ```bash
 trend-analysis \
   --csv path/to/data.csv \
-  --categoricals API Stabilizers "Mixing chambers" \
-  --numerics Flowrate \
-  --targets "Mean num nm" "Mean vol nm" \
+  --categoricals Category1 Category2 Category3 \
+  --numerics Numeric1 Numeric2 \
+  --targets Target1 Target2 \
   --no-dropna \
   --ols \
   --all
@@ -60,16 +61,17 @@ trend-analysis --config config.yaml
 ## YAML Config Example
 
 ```yaml
-csv_path: /content/data/asmodeus.csv
+csv_path: /path/to/data.csv
 input_categoricals:
-  - API
-  - Stabilizers
-  - Mixing chambers
+  - Category1
+  - Category2
+  - Category3
 input_numerics:
-  - Flowrate
+  - Numeric1
+  - Numeric2
 output_targets:
-  - Mean num nm
-  - Mean vol nm
+  - Target1
+  - Target2
 dropna_required: true
 use_wls: true
 significant_only: true
@@ -98,6 +100,10 @@ from trend_analysis.config import config
 from trend_analysis.main import main
 
 config["csv_path"] = "/path/to/data.csv"
+config["input_categoricals"] = ["Category1", "Category2"]
+config["input_numerics"] = ["Numeric1", "Numeric2"]
+config["output_targets"] = ["Target1", "Target2"]
+
 main(config)
 ```
 
