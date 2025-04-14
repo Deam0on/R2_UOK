@@ -56,8 +56,6 @@ def check_imbalance(df, config):
         if abs(s) > 1:
             print(f"⚠️  Output {target} is highly skewed (skew = {s:.2f})")
 
-
-
 def clean_anova_terms(index_list):
     cleaned = []
     for i in index_list:
@@ -65,17 +63,17 @@ def clean_anova_terms(index_list):
             cleaned.append("Intercept")
             continue
 
-        # Replace Q("X") with just X
-        i = re.sub(r'Q\\("([^"]+)"\\)', r'\1', i)
+        # Replace Q("X") → X
+        i = re.sub(r'Q\("([^"]+)"\)', r'\1', i)
 
-        # Replace C(Q("X")) with just X (if it slipped in)
-        i = re.sub(r'C\\("([^"]+)"\\)', r'\1', i)
+        # Replace C("X") → X
+        i = re.sub(r'C\("([^"]+)"\)', r'\1', i)
 
-        # Replace [T.Value] or [Value] with = Value
-        i = re.sub(r'\\[T\\.(.*?)\\]', r'= \1', i)
-        i = re.sub(r'\\[(.*?)\\]', r'= \1', i)
+        # Replace [T.X] or [X] → = X
+        i = re.sub(r'\[T\.(.*?)\]', r'= \1', i)
+        i = re.sub(r'\[(.*?)\]', r'= \1', i)
 
-        # Replace colons (:) with × to indicate interaction
+        # Replace interaction colons with ×
         i = i.replace(":", " × ")
 
         cleaned.append(i)
