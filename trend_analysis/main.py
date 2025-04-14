@@ -14,6 +14,7 @@ from trend_analysis.anova import run_anova
 from sklearn.decomposition import PCA
 from sklearn.model_selection import cross_val_score
 import pandas as pd
+from sklearn.metrics import mean_squared_error
 import logging
 
 def main(config=None):

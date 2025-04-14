@@ -3,6 +3,9 @@
 from tabulate import tabulate
 import logging
 from scipy.stats import skew
+from sklearn.metrics import mean_squared_error
+from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
+
 
 def print_table(df, title=None, floatfmt=".4f"):
     if title:
