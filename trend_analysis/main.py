@@ -16,6 +16,7 @@ from sklearn.model_selection import cross_val_score
 import pandas as pd
 from sklearn.metrics import mean_squared_error
 import logging
+from trend_analysis.utils import clean_anova_terms
 
 def main(config=None):
     setup_logger()
@@ -47,6 +48,8 @@ def main(config=None):
         coef_table = model.summary2().tables[1]
         if config["significant_only"]:
             coef_table = coef_table[coef_table["P>|t|"] < 0.05]
+        # print_table(coef_table, title="Significant Coefficients (p < 0.05)")
+        coef_table = coef_table.rename(index={"const": "Intercept"})
         print_table(coef_table, title="Significant Coefficients (p < 0.05)")
 
         if config.get("run_rf", False):
@@ -72,8 +75,13 @@ def main(config=None):
                 plot_pdp(rf, X, feature_names, top_idx, config["significant_only"], config.get("save_plots", False))
 
         if config.get("run_anova", False):
-            anova_model = run_anova(df, output, config["input_categoricals"], config["input_numerics"])
-            anova_table = anova_model.summary2().tables[1]
-            if config["significant_only"]:
-                anova_table = anova_table[anova_table["P>|t|"] < 0.05]
-            print_table(anova_table, title="ANOVA: Significant Terms (p < 0.05)")
+            anova_models = run_anova(df, output, config["input_categoricals"], config["input_numerics"])
+
+            for depth, model in anova_models.items():
+                anova_table = model.summary2().tables[1]
+                if config["significant_only"]:
+                    anova_table = anova_table[anova_table["P>|t|"] < 0.05]
+
+                anova_table.index = clean_anova_terms(anova_table.index)
+                print_table(anova_table, title=f"ANOVA: Depth {depth} Significant Terms (p < 0.05)")
+

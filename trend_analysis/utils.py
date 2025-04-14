@@ -54,3 +54,17 @@ def check_imbalance(df, config):
         s = skew(df[target].dropna())
         if abs(s) > 1:
             print(f"⚠️  Output {target} is highly skewed (skew = {s:.2f})")
+
+def clean_anova_terms(index_list):
+    cleaned = []
+    for i in index_list:
+        if "Intercept" in i:
+            cleaned.append("Intercept")
+        else:
+            i = i.replace("C(", "")
+            i = i.replace(")", "")
+            i = i.replace("[T.", " = ")
+            i = i.replace("]", "")
+            cleaned.append(i)
+    return cleaned
+
