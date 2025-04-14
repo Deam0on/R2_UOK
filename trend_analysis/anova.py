@@ -8,8 +8,9 @@ def run_anova(df, output, input_categoricals, input_numerics):
     """
     results = {}
     # All inputs
-    cat_terms = [f'C({col})' for col in input_categoricals]
-    num_terms = [col for col in input_numerics]
+    cat_terms = [f'C(Q("{col}"))' for col in input_categoricals]
+    num_terms = [f'Q("{col}")' for col in input_numerics]
+
     all_terms = cat_terms + num_terms
 
     max_depth = len(all_terms)
