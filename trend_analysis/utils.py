@@ -33,7 +33,7 @@ def print_model_metrics(y_true, y_pred):
     print_summary("Model Evaluation", [
         f"R² = {r2_score(y_true, y_pred):.3f}",
         f"MAE = {mean_absolute_error(y_true, y_pred):.3f}",
-        f"RMSE = {sklearn.metrics.root_mean_squared_error(y_true, y_pred, squared=False):.3f}"
+        f"RMSE = {sklearn.metrics.root_mean_squared_error(y_true, y_pred):.3f}"
     ])
 
 def setup_logger(logfile="analysis.log", level=logging.INFO):
