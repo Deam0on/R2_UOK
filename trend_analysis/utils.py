@@ -5,6 +5,7 @@ import logging
 from  sklearn import metrics
 from scipy.stats import skew
 from sklearn.metrics import r2_score, mean_absolute_error, root_mean_squared_error
+import re
 
 
 def print_table(df, title=None, floatfmt=".4f"):
@@ -55,16 +56,30 @@ def check_imbalance(df, config):
         if abs(s) > 1:
             print(f"⚠️  Output {target} is highly skewed (skew = {s:.2f})")
 
+
+
 def clean_anova_terms(index_list):
     cleaned = []
     for i in index_list:
         if "Intercept" in i:
             cleaned.append("Intercept")
-        else:
-            i = i.replace("C(", "")
-            i = i.replace(")", "")
-            i = i.replace("[T.", " = ")
-            i = i.replace("]", "")
-            cleaned.append(i)
+            continue
+
+        # Replace Q("X") with just X
+        i = re.sub(r'Q\\("([^"]+)"\\)', r'\1', i)
+
+        # Replace C(Q("X")) with just X (if it slipped in)
+        i = re.sub(r'C\\("([^"]+)"\\)', r'\1', i)
+
+        # Replace [T.Value] or [Value] with = Value
+        i = re.sub(r'\\[T\\.(.*?)\\]', r'= \1', i)
+        i = re.sub(r'\\[(.*?)\\]', r'= \1', i)
+
+        # Replace colons (:) with × to indicate interaction
+        i = i.replace(":", " × ")
+
+        cleaned.append(i)
+
     return cleaned
+
 
