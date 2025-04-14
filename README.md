@@ -1,12 +1,7 @@
-# PARAMNESIA 
+# PARAMNESIA: Parameter Analysis, Realistically Admitting Most Numbers End Somewhere In Abyss
 
-This is:
-- Parameter Analysis, Realistically Admitting Most Numbers End Somewhere In Abyss
-- Parameter Alignment & Regression Analysis Made Needlessly Exhausting, Slow, Irrational, & Arcane
-- Predictive Analysis via Random Associations & Models: Not Exactly Stable, Informative, or Accurate
-- Probabilistic Assessment of Regressors Amidst Metric Noise: Errors, Surprises, Inconsistencies, Apologies
-- Predictive Algorithms Realistically Approximated by Mystical Networks Exploring Senseless Inference Alternatives
-- a modular, CLI-compatible Python package for trend analysis, regression modeling, feature importance evaluation, SHAP interpretability, and statistical analysis.
+Or Probabilistic Assessment of Regressors Amidst Metric Noise: Errors, Surprises, Inconsistencies, Apologies. 
+Technically speaking a modular, CLI-compatible Python package for trend analysis, regression modeling, feature importance evaluation, SHAP interpretability, and statistical analysis.
 
 
 ## Features
