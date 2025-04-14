@@ -2,9 +2,8 @@
 
 from tabulate import tabulate
 import logging
+import sklearn.metrics
 from scipy.stats import skew
-from sklearn.metrics import mean_squared_error
-from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
 
 
 def print_table(df, title=None, floatfmt=".4f"):
@@ -30,11 +29,11 @@ def print_top_features(shap_values, feature_names, top_n=5):
     return top_idx
 
 def print_model_metrics(y_true, y_pred):
-    from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
+    from sklearn.metrics import r2_score, mean_absolute_error
     print_summary("Model Evaluation", [
         f"R² = {r2_score(y_true, y_pred):.3f}",
         f"MAE = {mean_absolute_error(y_true, y_pred):.3f}",
-        f"RMSE = {mean_squared_error(y_true, y_pred, squared=False):.3f}"
+        f"RMSE = {sklearn.metrics.mean_squared_error(y_true, y_pred, squared=False):.3f}"
     ])
 
 def setup_logger(logfile="analysis.log", level=logging.INFO):
