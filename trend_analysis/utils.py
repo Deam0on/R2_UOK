@@ -1,4 +1,8 @@
+### utils.py (updated)
+
 from tabulate import tabulate
+import logging
+from scipy.stats import skew
 
 def print_table(df, title=None, floatfmt=".4f"):
     if title:
@@ -21,3 +25,30 @@ def print_top_features(shap_values, feature_names, top_n=5):
         fname = format_feature_name(feature_names[idx])
         print(f"{rank}. {fname} (mean SHAP = {mean_shap[idx]:.4f})")
     return top_idx
+
+def print_model_metrics(y_true, y_pred):
+    from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
+    print_summary("Model Evaluation", [
+        f"R² = {r2_score(y_true, y_pred):.3f}",
+        f"MAE = {mean_absolute_error(y_true, y_pred):.3f}",
+        f"RMSE = {mean_squared_error(y_true, y_pred, squared=False):.3f}"
+    ])
+
+def setup_logger(logfile="analysis.log", level=logging.INFO):
+    logging.basicConfig(
+        filename=logfile,
+        level=level,
+        format='%(asctime)s [%(levelname)s] %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
+
+def check_imbalance(df, config):
+    print_summary("Checking for feature imbalances", [])
+    for col in config["input_numerics"]:
+        s = skew(df[col].dropna())
+        if abs(s) > 1:
+            print(f"⚠️  {col} is highly skewed (skew = {s:.2f})")
+    for target in config["output_targets"]:
+        s = skew(df[target].dropna())
+        if abs(s) > 1:
+            print(f"⚠️  Output {target} is highly skewed (skew = {s:.2f})")
