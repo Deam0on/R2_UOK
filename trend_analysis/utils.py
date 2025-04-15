@@ -11,6 +11,51 @@ import numpy as np
 import pandas as pd
 from sklearn.preprocessing import PowerTransformer
 
+def generate_auto_summary(target_summaries, config):
+    print("\n===== AUTO-GENERATED SUMMARY =====\n")
+
+    for target, data in target_summaries.items():
+        print(f"### Summary for: {target}\n")
+
+        ### SHAP Summary
+        print("- SHAP-Based Feature Impact:")
+        for feature, value, direction in data["shap_top"]:
+            print(f"  {feature} had a {direction} impact (mean SHAP = {value:.2f})")
+
+        ### Regression Coeff Summary
+        print("\n- Linear Model Interpretation:")
+        intercept_label = [idx for idx in data["coef_table"].index if idx.lower().startswith("intercept")]
+        if intercept_label:
+            intercept = data["coef_table"].loc[intercept_label[0], "Coef."]
+            print(f"  Baseline prediction (intercept): {intercept:.2f}")
+        for i, row in data["coef_table"].iterrows():
+            if "Intercept" in i:
+                continue
+            coef = row["Coef."]
+            effect = "increases" if coef > 0 else "decreases"
+            print(f"  {i} {effect} the output by {abs(coef):.2f}")
+
+        ### ANOVA Summary
+        print("\n- Statistically Significant Effects (ANOVA):")
+        sig_terms = data["anova_table"].loc[data["anova_table"]["P>|t|"] < 0.05]
+        for i, row in sig_terms.iterrows():
+            effect = f"  {i} (p = {row['P>|t|']:.3f}, F = {row['F']:.2f})"
+            print(effect)
+        if any((data["anova_table"]["P>|t|"] > 0.05) & (data["anova_table"]["P>|t|"] < 0.1)):
+            print("  Note: Some terms were marginally significant (0.05 < p < 0.1)")
+
+        ### Model Fit Summary
+        print("\n- Model Performance:")
+        print(f"  R² = {data['metrics']['r2']:.3f}, MAE = {data['metrics']['mae']:.2f}, RMSE = {data['metrics']['rmse']:.2f}")
+        if data.get("cv_scores"):
+            print(f"  Random Forest CV R² = {np.mean(data['cv_scores']):.3f} ± {np.std(data['cv_scores']):.3f}")
+
+        ### Skewness Note
+        for col, val in data.get("skew_info", {}).items():
+            if abs(val) > 1:
+                print(f"  Note: {col} was highly skewed (skew = {val:.2f}) and may have been transformed.")
+
+        print("\n------------------------------------\n")
 
 def print_table(df, title=None, floatfmt=".4f"):
     if title:

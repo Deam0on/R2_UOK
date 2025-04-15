@@ -3,7 +3,8 @@
 from trend_analysis.config import config as default_config
 from trend_analysis.utils import (
     print_table, print_summary, format_feature_name,
-    print_top_features, print_model_metrics, setup_logger, check_imbalance
+    print_top_features, print_model_metrics, setup_logger, check_imbalance,
+    transform_skewed_columns, clean_linear_terms, clean_anova_terms, generate_auto_summary
 )
 from trend_analysis.preprocess import load_and_clean, build_preprocessor
 from trend_analysis.visualization import show_correlation, plot_pca
@@ -13,12 +14,11 @@ from trend_analysis.pdp_analysis import plot_pdp
 from trend_analysis.anova import run_anova
 from sklearn.decomposition import PCA
 from sklearn.model_selection import cross_val_score
-import pandas as pd
-from sklearn.metrics import mean_squared_error
-import logging
-from trend_analysis.utils import clean_anova_terms
-from trend_analysis.utils import transform_skewed_columns, clean_linear_terms
 from sklearn.impute import SimpleImputer
+import pandas as pd
+import logging
+from sklearn.metrics import mean_squared_error
+import numpy as np
 
 def main(config=None):
     setup_logger()
@@ -46,12 +46,10 @@ def main(config=None):
                 categories.remove(ref)
                 df[col] = pd.Categorical(df[col].astype(str), categories=[ref] + categories, ordered=True)
 
-
-
     if config.get("run_imbalance_check", False):
         skewed_cols = check_imbalance(df, config)
         if skewed_cols:
-            print("→ Transforming skewed columns...")
+            print(f"→ Transforming skewed columns: {', '.join(skewed_cols)}")
             df = transform_skewed_columns(df, config)
 
     preprocessor = build_preprocessor(config["input_categoricals"], config["input_numerics"])
@@ -61,37 +59,34 @@ def main(config=None):
     show_correlation(df, config["input_numerics"], config.get("save_plots", False))
     plot_pca(X, PCA(), config.get("save_plots", False))
 
+    target_summaries = {}
+
     for output in config["output_targets"]:
         y = df[output]
+        target_summary = {}
 
         print_summary(f"Linear Regression for '{output}'", [])
         model = fit_linear_model(X, y, df, output, config["use_wls"], config["significant_only"])
 
         coef_table = model.summary2().tables[1]
-
-        # Remap feature names
         new_index = ["Intercept"] + list(feature_names)
         coef_table.index = new_index[: len(coef_table)]
         coef_table.index = clean_linear_terms(coef_table.index)
 
-        ref_terms = []
-        for col in config["input_categoricals"]:
-            ref = config.get("reference_levels", {}).get(col)
-            if ref:
-                ref_terms.append(f"{col} = {ref}")
+        ref_terms = [f"{col} = {config['reference_levels'][col]}" for col in config["input_categoricals"] if col in config.get("reference_levels", {})]
         if ref_terms:
-            if "Intercept" in coef_table.index and ref_terms:
+            if "Intercept" in coef_table.index:
                 coef_table.rename(index={"Intercept": f"Intercept ({', '.join(ref_terms)})"}, inplace=True)
-
 
         if config["significant_only"]:
             coef_table = coef_table[coef_table["P>|t|"] < 0.05]
 
         print_table(coef_table, title="Significant Coefficients (p < 0.05)")
-
+        target_summary["coef_table"] = coef_table
 
         if config.get("run_rf", False):
             rf, _ = fit_random_forest(X, y)
+            scores = None
 
             if config.get("run_cv", False):
                 scores = cross_val_score(rf, X, y, cv=5, scoring='r2')
@@ -99,39 +94,44 @@ def main(config=None):
                     f"Mean R²: {scores.mean():.3f}",
                     f"Std Dev : {scores.std():.3f}"
                 ])
+                target_summary["cv_scores"] = scores
 
             rf.fit(X, y)
             if config.get("run_eval", False):
                 y_pred = rf.predict(X)
                 print_model_metrics(y, y_pred)
+                target_summary["metrics"] = {
+                    "r2": rf.score(X, y),
+                    "mae": np.mean(np.abs(y - y_pred)),
+                    "rmse": mean_squared_error(y, y_pred, squared=False)
+                }
 
             if config.get("run_shap", False):
                 mean_shap, top_idx, shap_values = explain_shap(rf, X, feature_names, config["significant_only"], config.get("save_plots", False))
                 print_top_features(abs(shap_values), feature_names, top_n=5)
-
-            if config.get("run_pdp", False):
-                plot_pdp(rf, X, feature_names, top_idx, config["significant_only"], config.get("save_plots", False))
+                shap_top = []
+                mean_abs = np.abs(shap_values).mean(axis=0)
+                for idx in top_idx:
+                    dir = "positive" if np.corrcoef(X[:, idx], y)[0, 1] > 0 else "negative"
+                    shap_top.append((feature_names[idx], mean_abs[idx], dir))
+                target_summary["shap_top"] = shap_top
 
         if config.get("run_anova", False):
             anova_models = run_anova(df, output, config["input_categoricals"], config["input_numerics"])
-
+            all_anova = []
             for depth, model in anova_models.items():
                 anova_table = model.summary2().tables[1]
                 if config["significant_only"]:
                     anova_table = anova_table[anova_table["P>|t|"] < 0.05]
-
                 anova_table.index = clean_anova_terms(anova_table.index)
-
-                # Remap ANOVA Intercept to reference levels
-                ref_terms = []
-                for col in config["input_categoricals"]:
-                    ref = config.get("reference_levels", {}).get(col)
-                    if ref:
-                        ref_terms.append(f"{col} = {ref}")
                 if ref_terms:
-                    if "Intercept" in anova_table.index and ref_terms:
+                    if "Intercept" in anova_table.index:
                         anova_table.rename(index={"Intercept": f"Intercept ({', '.join(ref_terms)})"}, inplace=True)
-
                 print_table(anova_table, title=f"ANOVA: Depth {depth} Significant Terms (p < 0.05)")
+                if depth == 1:
+                    target_summary["anova_table"] = anova_table
 
+        target_summaries[output] = target_summary
 
+    if config.get("generate_summary", False):
+        generate_auto_summary(target_summaries, config)

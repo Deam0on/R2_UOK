@@ -15,3 +15,4 @@ reference_levels:
   API: Indometacin
   Stabilizers: P188
   Mixing chambers: FDmixer
+generate_summary: true

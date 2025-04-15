@@ -27,6 +27,8 @@ def parse_args():
     parser.add_argument("--run-eval", action="store_true", help="Print evaluation metrics")
     parser.add_argument("--run-cv", action="store_true", help="Enable cross-validation")
     parser.add_argument("--run-imbalance-check", action="store_true", help="Check data imbalance")
+    parser.add_argument("--generate-summary", action="store_true", help="Generate a human-readable summary at the end")
+
 
     return parser.parse_args()
 
@@ -59,6 +61,7 @@ def main():
     config["run_eval"] = args.run_eval
     config["run_cv"] = args.run_cv
     config["run_imbalance_check"] = args.run_imbalance_check
+    config["generate_summary"] = args.generate_summary
 
     run_main(config)
 
