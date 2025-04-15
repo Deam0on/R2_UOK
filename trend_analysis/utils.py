@@ -14,6 +14,14 @@ from sklearn.preprocessing import PowerTransformer
 def generate_auto_summary(target_summaries, config):
     print("\n===== AUTO-GENERATED SUMMARY =====\n")
 
+    # Print reference levels if available
+    ref_levels = config.get("reference_levels", {})
+    if ref_levels:
+        print("Reference Levels:")
+        for col, ref in ref_levels.items():
+            print(f"- {col} = {ref}")
+        print()  # Blank line for spacing
+
     for target, data in target_summaries.items():
         print(f"### Summary for: {target}\n")
 
