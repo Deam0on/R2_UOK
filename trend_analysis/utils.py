@@ -6,6 +6,10 @@ from  sklearn import metrics
 from scipy.stats import skew
 from sklearn.metrics import r2_score, mean_absolute_error, root_mean_squared_error
 import re
+from tabulate import tabulate
+import numpy as np
+import pandas as pd
+from sklearn.preprocessing import PowerTransformer
 
 
 def print_table(df, title=None, floatfmt=".4f"):
@@ -45,16 +49,23 @@ def setup_logger(logfile="analysis.log", level=logging.INFO):
         datefmt='%Y-%m-%d %H:%M:%S'
     )
 
-def check_imbalance(df, config):
+def check_imbalance(df, config, skew_threshold=1.0):
     print_summary("Checking for feature imbalances", [])
+    skewed_cols = []
+
     for col in config["input_numerics"]:
         s = skew(df[col].dropna())
-        if abs(s) > 1:
-            print(f"⚠️  {col} is highly skewed (skew = {s:.2f})")
+        if abs(s) > skew_threshold:
+            print(f"{col} is highly skewed (skew = {s:.2f})")
+            skewed_cols.append(col)
+
     for target in config["output_targets"]:
         s = skew(df[target].dropna())
-        if abs(s) > 1:
-            print(f"⚠️  Output {target} is highly skewed (skew = {s:.2f})")
+        if abs(s) > skew_threshold:
+            print(f"Output {col} is highly skewed (skew = {s:.2f})")
+            skewed_cols.append(col)
+
+    return skewed_cols
 
 def clean_anova_terms(index_list):
     cleaned = []
@@ -79,5 +90,24 @@ def clean_anova_terms(index_list):
         cleaned.append(i)
 
     return cleaned
+
+def transform_skewed_columns(df, config, skew_threshold=1.0):
+    """
+    Detect and transform highly skewed numeric columns using Yeo-Johnson.
+    Returns a new DataFrame with transformed columns.
+    """
+    pt = PowerTransformer(method="yeo-johnson")
+    numeric_cols = config["input_numerics"] + config["output_targets"]
+
+    for col in numeric_cols:
+        if col not in df.columns:
+            continue
+        s = skew(df[col].dropna())
+        if abs(s) > skew_threshold:
+            print(f"Transforming '{col}' (skew = {s:.2f}) using Yeo-Johnson")
+            transformed = pt.fit_transform(df[[col]])
+            df[col + "_transformed"] = transformed.flatten()
+
+    return df
 
 

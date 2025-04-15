@@ -17,6 +17,7 @@ import pandas as pd
 from sklearn.metrics import mean_squared_error
 import logging
 from trend_analysis.utils import clean_anova_terms
+from trend_analysis.utils import transform_skewed_columns
 
 def main(config=None):
     setup_logger()
@@ -31,7 +32,10 @@ def main(config=None):
     )
 
     if config.get("run_imbalance_check", False):
-        check_imbalance(df, config)
+        skewed_cols = check_imbalance(df, config)
+        if skewed_cols:
+            print("→ Transforming skewed columns...")
+            df = transform_skewed_columns(df, config)
 
     preprocessor = build_preprocessor(config["input_categoricals"], config["input_numerics"])
     X = preprocessor.fit_transform(df[config["input_categoricals"] + config["input_numerics"]])
