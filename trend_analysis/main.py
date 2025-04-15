@@ -114,5 +114,16 @@ def main(config=None):
                     anova_table = anova_table[anova_table["P>|t|"] < 0.05]
 
                 anova_table.index = clean_anova_terms(anova_table.index)
+
+                # Remap ANOVA Intercept to reference levels
+                ref_terms = []
+                for col in config["input_categoricals"]:
+                    ref = config.get("reference_levels", {}).get(col)
+                    if ref:
+                        ref_terms.append(f"{col} = {ref}")
+                if ref_terms:
+                    anova_table.rename(index={"Intercept": f"Intercept ({', '.join(ref_terms)})"}, inplace=True)
+
                 print_table(anova_table, title=f"ANOVA: Depth {depth} Significant Terms (p < 0.05)")
+
 
