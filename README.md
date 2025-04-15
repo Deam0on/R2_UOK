@@ -1,6 +1,7 @@
 # R²UOK: Resampling & Regressing Under Ominous Knowledge
 
 You're doing cross-validation and already know the model won’t generalize.
+
 A modular, CLI-compatible Python package for trend analysis, regression modeling, feature importance evaluation, SHAP interpretability, and statistical analysis.
 
 
