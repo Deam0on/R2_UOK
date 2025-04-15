@@ -61,12 +61,18 @@ def main(config=None):
 
         print_summary(f"Linear Regression for '{output}'", [])
         model = fit_linear_model(X, y, df, output, config["use_wls"], config["significant_only"])
+
         coef_table = model.summary2().tables[1]
+
+        # Remap feature names
+        new_index = ["Intercept"] + list(feature_names)
+        coef_table.index = new_index[: len(coef_table)]
+
         if config["significant_only"]:
             coef_table = coef_table[coef_table["P>|t|"] < 0.05]
-        # print_table(coef_table, title="Significant Coefficients (p < 0.05)")
-        coef_table = coef_table.rename(index={"const": "Intercept"})
+
         print_table(coef_table, title="Significant Coefficients (p < 0.05)")
+
 
         if config.get("run_rf", False):
             rf, _ = fit_random_forest(X, y)
