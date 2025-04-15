@@ -103,7 +103,7 @@ def main(config=None):
                 target_summary["metrics"] = {
                     "r2": rf.score(X, y),
                     "mae": np.mean(np.abs(y - y_pred)),
-                    "rmse": root_mean_squared_error(y, y_pred, squared=False)
+                    "rmse": root_mean_squared_error(y, y_pred)
                 }
 
             if config.get("run_shap", False):
