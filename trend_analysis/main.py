@@ -32,11 +32,15 @@ def main(config=None):
     )
 
     for col in config["input_categoricals"]:
-        ref = config.get("reference_levels", {}).get(col)
+        ref = str(config.get("reference_levels", {}).get(col))
         if ref:
-            categories = sorted(df[col].unique().tolist())
-            categories.remove(ref)
-            df[col] = pd.Categorical(df[col], categories=[ref] + categories, ordered=True)
+            categories = sorted([str(x) for x in df[col].dropna().unique()])
+            if ref not in categories:
+                print(f"⚠️  Warning: Reference '{ref}' not found in column '{col}'")
+            else:
+                categories.remove(ref)
+                df[col] = pd.Categorical(df[col].astype(str), categories=[ref] + categories, ordered=True)
+
 
 
     if config.get("run_imbalance_check", False):
