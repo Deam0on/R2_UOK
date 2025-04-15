@@ -67,7 +67,7 @@ def main(config=None):
         # Remap feature names
         new_index = ["Intercept"] + list(feature_names)
         coef_table.index = new_index[: len(coef_table)]
-        coef_table.index = clean_linear_terms(coef_table.index)
+        # coef_table.index = clean_linear_terms(coef_table.index)
 
         ref_terms = []
         for col in config["input_categoricals"]:
