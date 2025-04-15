@@ -17,7 +17,7 @@ from sklearn.model_selection import cross_val_score
 from sklearn.impute import SimpleImputer
 import pandas as pd
 import logging
-from sklearn.metrics import mean_squared_error
+from sklearn.metrics import root_mean_squared_error
 import numpy as np
 
 def main(config=None):
@@ -103,7 +103,7 @@ def main(config=None):
                 target_summary["metrics"] = {
                     "r2": rf.score(X, y),
                     "mae": np.mean(np.abs(y - y_pred)),
-                    "rmse": mean_squared_error(y, y_pred, squared=False)
+                    "rmse": root_mean_squared_error(y, y_pred, squared=False)
                 }
 
             if config.get("run_shap", False):
