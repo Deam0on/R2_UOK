@@ -50,7 +50,7 @@ def generate_auto_summary(target_summaries, config):
         ### Model Fit Summary
         print("\n- Model Performance:")
         print(f"  R² = {data['metrics']['r2']:.3f}, MAE = {data['metrics']['mae']:.2f}, RMSE = {data['metrics']['rmse']:.2f}")
-        if data.get("cv_scores"):
+        if "cv_scores" in data and data["cv_scores"] is not None:
             print(f"  Random Forest CV R² = {np.mean(data['cv_scores']):.3f} ± {np.std(data['cv_scores']):.3f}")
 
         ### Skewness Note
