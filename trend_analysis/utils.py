@@ -39,7 +39,10 @@ def generate_auto_summary(target_summaries, config):
         print("\n- Statistically Significant Effects (ANOVA):")
         sig_terms = data["anova_table"].loc[data["anova_table"]["P>|t|"] < 0.05]
         for i, row in sig_terms.iterrows():
-            effect = f"  {i} (p = {row['P>|t|']:.3f}, F = {row['F']:.2f})"
+            if "F" in row:
+                effect = f"{i} (p = {row['P>|t|']:.3f}, F = {row['F']:.2f})"
+            else:
+                effect = f"{i} (p = {row['P>|t|']:.3f})"
             print(effect)
         if any((data["anova_table"]["P>|t|"] > 0.05) & (data["anova_table"]["P>|t|"] < 0.1)):
             print("  Note: Some terms were marginally significant (0.05 < p < 0.1)")
