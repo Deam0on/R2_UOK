@@ -41,15 +41,16 @@ def clean_linear_terms(index_list):
             cleaned.append(name)
         elif name.startswith("cat__"):
             parts = name.split("__")
-            if len(parts) >= 3:
+            # Handle typical 'cat__Col__Value' pattern
+            if len(parts) == 3:
                 cleaned.append(f"{parts[1]} = {parts[2]}")
+            elif len(parts) > 3:
+                cleaned.append(f"{parts[1]} = {'__'.join(parts[2:])}")
             else:
-                cleaned.append(name)  # fallback if format is unexpected
+                cleaned.append(name)  # fallback
         else:
             cleaned.append(name)
     return cleaned
-
-
 
 def print_model_metrics(y_true, y_pred):
     print_summary("Model Evaluation", [
