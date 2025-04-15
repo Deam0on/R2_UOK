@@ -42,7 +42,7 @@ def clean_linear_terms(index_list):
         elif name.startswith("cat__"):
             parts = name.split("__")
             # Handle typical 'cat__Col__Value' pattern
-            if len(parts) == 3:
+            if len(parts) >= 3:
                 cleaned.append(f"{parts[1]} = {parts[2]}")
             elif len(parts) > 3:
                 cleaned.append(f"{parts[1]} = {'__'.join(parts[2:])}")

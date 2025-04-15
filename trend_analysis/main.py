@@ -18,6 +18,7 @@ from sklearn.metrics import mean_squared_error
 import logging
 from trend_analysis.utils import clean_anova_terms
 from trend_analysis.utils import transform_skewed_columns, clean_linear_terms
+from sklearn.impute import SimpleImputer
 
 def main(config=None):
     setup_logger()
@@ -30,6 +31,10 @@ def main(config=None):
         config["output_targets"],
         dropna_required=config.get("dropna_required", True)
     )
+
+    if not config.get("dropna_required", False):
+        imputer = SimpleImputer(strategy="mean")
+        df[config["input_numerics"]] = imputer.fit_transform(df[config["input_numerics"]])
 
     for col in config["input_categoricals"]:
         ref = str(config.get("reference_levels", {}).get(col))
@@ -75,7 +80,9 @@ def main(config=None):
             if ref:
                 ref_terms.append(f"{col} = {ref}")
         if ref_terms:
-            coef_table.rename(index={"Intercept": f"Intercept ({', '.join(ref_terms)})"}, inplace=True)
+            if "Intercept" in coef_table.index and ref_terms:
+                coef_table.rename(index={"Intercept": f"Intercept ({', '.join(ref_terms)})"}, inplace=True)
+
 
         if config["significant_only"]:
             coef_table = coef_table[coef_table["P>|t|"] < 0.05]
@@ -122,7 +129,8 @@ def main(config=None):
                     if ref:
                         ref_terms.append(f"{col} = {ref}")
                 if ref_terms:
-                    anova_table.rename(index={"Intercept": f"Intercept ({', '.join(ref_terms)})"}, inplace=True)
+                    if "Intercept" in anova_table.index and ref_terms:
+                        anova_table.rename(index={"Intercept": f"Intercept ({', '.join(ref_terms)})"}, inplace=True)
 
                 print_table(anova_table, title=f"ANOVA: Depth {depth} Significant Terms (p < 0.05)")
 
