@@ -11,3 +11,7 @@ output_targets:
 dropna_required: true
 use_wls: true
 significant_only: true
+reference_levels:
+  API: Indometacin
+  Stabilizers: P188
+  Mixing chambers: FDmixer

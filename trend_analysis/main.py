@@ -31,6 +31,14 @@ def main(config=None):
         dropna_required=config.get("dropna_required", True)
     )
 
+    for col in config["input_categoricals"]:
+        ref = config.get("reference_levels", {}).get(col)
+        if ref:
+            categories = sorted(df[col].unique().tolist())
+            categories.remove(ref)
+            df[col] = pd.Categorical(df[col], categories=[ref] + categories, ordered=True)
+
+
     if config.get("run_imbalance_check", False):
         skewed_cols = check_imbalance(df, config)
         if skewed_cols:
