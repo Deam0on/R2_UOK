@@ -4,16 +4,17 @@ You're doing cross-validation and already know the model won’t generalize.
 
 A modular, CLI-compatible Python package for trend analysis, regression modeling, feature importance evaluation, SHAP interpretability, and statistical analysis.
 
-
 ## Features
 
 - Correlation matrix heatmap and PCA
 - OLS/WLS regression with significance filtering
-- Random Forest regression with cross-validation
+- Reference level selection for categorical predictors
+- Residual diagnostics and skewness-aware transformations
+- Random Forest regression with cross-validation and evaluation
 - SHAP value analysis and ranking
 - SHAP interaction heatmaps
 - Partial dependence plots (1D and 2D)
-- ANOVA and 3-way interaction modeling
+- ANOVA with multi-depth interaction support
 - CLI interface for scripted use
 - YAML configuration file support
 - Optional saving of plots to PNG
@@ -79,6 +80,16 @@ dropna_required: true
 use_wls: true
 significant_only: true
 save_plots: true
+run_rf: true
+run_cv: true
+run_eval: true
+run_shap: true
+run_pdp: false
+run_anova: true
+run_imbalance_check: true
+reference_levels:
+  Category1: SomeReference
+  Category2: OtherReference
 ```
 
 ## Available CLI Parameters
@@ -93,6 +104,7 @@ save_plots: true
 | `--no-dropna`        | No       | Keep rows with missing values                                      |
 | `--ols`              | No       | Use Ordinary Least Squares instead of Weighted Least Squares       |
 | `--all`              | No       | Show all results, not just significant ones                        |
+| `--save-plots`       | No       | Save figures to PNG instead of showing them                        |
 
 ## Programmatic Usage
 
@@ -106,15 +118,15 @@ config["csv_path"] = "/path/to/data.csv"
 config["input_categoricals"] = ["Category1", "Category2"]
 config["input_numerics"] = ["Numeric1", "Numeric2"]
 config["output_targets"] = ["Target1", "Target2"]
-
 main(config)
 ```
 
 ## Output
 
 - Printed summaries of regression and ANOVA
-- Cross-validated R-squared scores
+- Cross-validated R-squared scores and error metrics
 - SHAP summaries and feature importances
+- Automatically transformed skewed variables
 - Plots (interactive or saved as PNG)
 - Top interactions and residual diagnostics
 

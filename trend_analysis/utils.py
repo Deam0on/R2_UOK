@@ -34,6 +34,19 @@ def print_top_features(shap_values, feature_names, top_n=5):
         print(f"{rank}. {fname} (mean SHAP = {mean_shap[idx]:.4f})")
     return top_idx
 
+def clean_linear_terms(index_list):
+    cleaned = []
+    for name in index_list:
+        if name == "Intercept":
+            cleaned.append(name)
+        elif name.startswith("cat__"):
+            parts = name.split("__")
+            cleaned.append(f"{parts[1]} = {parts[2]}")
+        else:
+            cleaned.append(name)
+    return cleaned
+
+
 def print_model_metrics(y_true, y_pred):
     print_summary("Model Evaluation", [
         f"R² = {r2_score(y_true, y_pred):.3f}",

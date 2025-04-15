@@ -17,7 +17,7 @@ import pandas as pd
 from sklearn.metrics import mean_squared_error
 import logging
 from trend_analysis.utils import clean_anova_terms
-from trend_analysis.utils import transform_skewed_columns
+from trend_analysis.utils import transform_skewed_columns, clean_linear_terms
 
 def main(config=None):
     setup_logger()
@@ -67,6 +67,15 @@ def main(config=None):
         # Remap feature names
         new_index = ["Intercept"] + list(feature_names)
         coef_table.index = new_index[: len(coef_table)]
+        coef_table.index = clean_linear_terms(coef_table.index)
+
+        ref_terms = []
+        for col in config["input_categoricals"]:
+            ref = config.get("reference_levels", {}).get(col)
+            if ref:
+                ref_terms.append(f"{col} = {ref}")
+        if ref_terms:
+            coef_table.rename(index={"Intercept": f"Intercept ({', '.join(ref_terms)})"}, inplace=True)
 
         if config["significant_only"]:
             coef_table = coef_table[coef_table["P>|t|"] < 0.05]
