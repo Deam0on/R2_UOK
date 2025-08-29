@@ -41,6 +41,38 @@ def setup_summary_logger(output_dir=None):
     return logging.getLogger(__name__)
 
 
+def save_and_show_plot(output_dir, plot_name, logger, show_plot=True):
+    """
+    Save plot to Visualizations folder and optionally show it.
+    
+    Args:
+        output_dir (str): Output directory path
+        plot_name (str): Name of the plot file (without extension)
+        logger: Logger instance
+        show_plot (bool): Whether to display the plot
+    """
+    try:
+        # Ensure Visualizations directory exists
+        viz_dir = os.path.join(output_dir, "Visualizations")
+        os.makedirs(viz_dir, exist_ok=True)
+        
+        # Save the plot
+        plot_path = os.path.join(viz_dir, f"{plot_name}.png")
+        plt.savefig(plot_path, dpi=300, bbox_inches='tight', facecolor='white')
+        logger.info(f"Saved plot to {plot_path}")
+        
+        # Show plot if requested
+        if show_plot:
+            plt.show()
+        else:
+            plt.close()  # Close to save memory if not showing
+            
+    except Exception as e:
+        logger.warning(f"Failed to save plot {plot_name}: {e}")
+        if show_plot:
+            plt.show()  # Still show even if save failed
+
+
 def load_config(config_path):
     """
     Load configuration from YAML file.
@@ -140,7 +172,7 @@ def process_shap_importances(output_dir, param_names, logger):
                 plt.title("Top Parameters by SHAP Importance")
                 plt.ylabel("Summed mean_abs_shap")
                 plt.tight_layout()
-                plt.show()
+                save_and_show_plot(output_dir, "shap_parameter_importance", logger)
             except Exception as e:
                 logger.exception(f"Failed to plot SHAP importances: {e}")
         except Exception as e:
@@ -194,7 +226,9 @@ def process_anova_files(output_dir, param_names, logger):
                             )
                             plt.ylabel("Sum |Coef| (significant)")
                             plt.tight_layout()
-                            plt.show()
+                            # Generate unique plot name based on filename and depth
+                            plot_name = f"anova_parameters_{filename.replace(' ', '_')}{depth_str.replace(' ', '_')}"
+                            save_and_show_plot(output_dir, plot_name, logger)
                         except Exception as e:
                             logger.exception(f"Failed to plot ANOVA results for {filename}: {e}")
                     else:
@@ -247,7 +281,9 @@ def process_regression_files(output_dir, param_names, logger):
                         )
                         plt.ylabel("Sum |Coef|")
                         plt.tight_layout()
-                        plt.show()
+                        # Generate unique plot name based on filename
+                        plot_name = f"regression_parameters_{os.path.basename(reg_file).replace('.csv', '').replace(' ', '_')}"
+                        save_and_show_plot(output_dir, plot_name, logger)
                     except Exception as e:
                         logger.exception(f"Failed to plot regression results for {reg_file}: {e}")
                 else:
@@ -309,7 +345,9 @@ def process_permutation_importance(output_dir, logger):
                     plt.title(f"Top Parameters by Permutation Importance ({target_name})")
                     plt.ylabel("Mean Importance")
                     plt.tight_layout()
-                    plt.show()
+                    # Generate unique plot name based on target
+                    plot_name = f"permutation_importance_{target_name.replace(' ', '_')}"
+                    save_and_show_plot(output_dir, plot_name, logger)
                 except Exception as e:
                     logger.exception(f"Failed to plot permutation importance: {e}")
             except Exception as e:
@@ -425,7 +463,7 @@ def process_pdp_files(output_dir, param_names, logger, top_n=10):
                     ax2.invert_yaxis()
                     
                     plt.tight_layout()
-                    plt.show()
+                    save_and_show_plot(output_dir, "pdp_effect_magnitude_summary", logger)
                     
                 except Exception as e:
                     logger.exception(f"Failed to plot PDP summary: {e}")
@@ -473,7 +511,7 @@ def process_pdp_files(output_dir, param_names, logger, top_n=10):
                 
                 plt.suptitle(f'Detailed PDP Plots - Top {min(6, len(top_features_detailed))} Features by Effect Magnitude', fontsize=14)
                 plt.tight_layout()
-                plt.show()
+                save_and_show_plot(output_dir, "pdp_detailed_top_features", logger)
                 
             except Exception as e:
                 logger.exception(f"Failed to create detailed PDP plots: {e}")
@@ -485,18 +523,36 @@ def process_pdp_files(output_dir, param_names, logger, top_n=10):
 
 def main():
     """Main function to run the summary analysis."""
+    import argparse
+    
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description="Generate analysis summary with auto-saved plots")
+    parser.add_argument("output_dir", nargs="?", default=None, 
+                       help="Specific output directory to analyze (default: latest in output/)")
+    args = parser.parse_args()
+    
     # Initialize logger first (without output dir initially)
     logger = setup_summary_logger()
     
     try:
-        # Find latest results directory
-        base_output_dir = "output"
-        output_dir = find_latest_results_dir(base_output_dir)
-        print(f"Using output directory: {output_dir}")
+        # Determine output directory
+        if args.output_dir:
+            if os.path.exists(args.output_dir):
+                output_dir = args.output_dir
+                print(f"Using specified output directory: {output_dir}")
+            else:
+                print(f"Error: Specified directory {args.output_dir} does not exist")
+                return
+        else:
+            # Find latest results directory
+            base_output_dir = "output"
+            output_dir = find_latest_results_dir(base_output_dir)
+            print(f"Using latest output directory: {output_dir}")
         
         # Reinitialize logger with correct output directory
         logger = setup_summary_logger(output_dir)
         logger.info(f"Using output directory: {output_dir}")
+        logger.info("Starting summary analysis with auto-saved plots")
 
         # Load configuration
         config_path = os.path.join(os.path.dirname(__file__), "..", "config", "config.yaml")
@@ -509,14 +565,15 @@ def main():
             param_names = []
 
         # Process different types of results
+        print("\nGenerating summary plots (auto-saved to Visualizations folder)...")
         process_shap_importances(output_dir, param_names, logger)
         process_anova_files(output_dir, param_names, logger)  
         process_regression_files(output_dir, param_names, logger)
         process_permutation_importance(output_dir, logger)
         process_pdp_files(output_dir, param_names, logger)
 
-        print("\nSummary complete.")
-        logger.info("Summary analysis completed successfully.")
+        print(f"\nSummary complete. All plots saved to: {os.path.join(output_dir, 'Visualizations')}")
+        logger.info("Summary analysis completed successfully with all plots saved")
         
     except Exception as e:
         logger.exception(f"Failed to complete summary analysis: {e}")

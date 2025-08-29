@@ -260,9 +260,11 @@ def main(config=None):
         logger.info("Plotting PCA...")
         try:
             output_file = os.path.join(output_dir, "Visualizations", "pca_variance.png")
-            plot_pca(X, PCA(), save_plots=True, output_file=output_file)
+            pca_results = plot_pca(X, PCA(), save_plots=True, output_file=output_file, 
+                                 feature_names=feature_names, output_dir=output_dir)
         except Exception as e:
             logger.exception(f"Failed to plot PCA: {e}")
+            pca_results = None
 
         target_summaries = {}
 

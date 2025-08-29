@@ -3,9 +3,11 @@ Visualization utilities for correlation matrices and PCA plots.
 """
 
 import logging
+import os
 
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import seaborn as sns
 
 
@@ -86,15 +88,20 @@ def show_correlation(df, input_numerics, save_plots=False, output_file="correlat
         raise
 
 
-def plot_pca(X, pca, save_plots=False, output_file="pca_variance.png"):
+def plot_pca(X, pca, save_plots=False, output_file="pca_variance.png", feature_names=None, output_dir=None):
     """
-    Plot cumulative explained variance for PCA components.
+    Plot cumulative explained variance for PCA components and save component loadings.
 
     Parameters:
     - X: The input data to perform PCA on.
     - pca: The PCA object (from sklearn.decomposition) to use for the transformation.
     - save_plots: Boolean indicating whether to save the plot as a file.
     - output_file: Name of the output file if save_plots is True.
+    - feature_names: List of feature names for component loadings analysis.
+    - output_dir: Output directory for saving component loadings CSV files.
+    
+    Returns:
+    - dict: Dictionary containing PCA analysis results including component loadings
     
     Raises:
     - ValueError: If input parameters are invalid.
@@ -159,6 +166,77 @@ def plot_pca(X, pca, save_plots=False, output_file="pca_variance.png"):
         n_components_95 = np.argmax(cumsum_var >= 0.95) + 1
         logger.info(f"PCA analysis: {n_components_80} components explain 80% variance, "
                    f"{n_components_95} components explain 95% variance")
+        
+        # Analyze and save component loadings
+        pca_results = {
+            'n_components_80': n_components_80,
+            'n_components_95': n_components_95,
+            'explained_variance_ratio': explained_variance_ratio,
+            'cumulative_variance': cumsum_var
+        }
+        
+        if feature_names is not None and output_dir is not None:
+            try:
+                # Get component loadings (eigenvectors)
+                components = pca.components_
+                
+                # Create component loadings DataFrame
+                loadings_df = pd.DataFrame(
+                    components.T,
+                    columns=[f'PC{i+1}' for i in range(components.shape[0])],
+                    index=feature_names
+                )
+                
+                # Save all component loadings
+                loadings_file = os.path.join(output_dir, "pca_component_loadings.csv")
+                loadings_df.to_csv(loadings_file)
+                logger.info(f"Saved PCA component loadings to: {loadings_file}")
+                
+                # Create summary of top contributors for key components
+                summary_data = []
+                
+                # Analyze the components that explain 80% and 95% variance
+                key_components = min(n_components_95, 15)  # Look at up to 15 components max
+                
+                for i in range(key_components):
+                    pc_name = f'PC{i+1}'
+                    loadings = loadings_df[pc_name].abs().sort_values(ascending=False)
+                    top_features = loadings.head(5)  # Top 5 contributors
+                    
+                    summary_data.append({
+                        'Component': pc_name,
+                        'Variance_Explained': f"{explained_variance_ratio[i]:.3f}",
+                        'Cumulative_Variance': f"{cumsum_var[i]:.3f}",
+                        'Top_5_Features': ', '.join([f"{feat}({val:.3f})" for feat, val in top_features.items()])
+                    })
+                
+                # Save summary
+                summary_df = pd.DataFrame(summary_data)
+                summary_file = os.path.join(output_dir, "pca_components_summary.csv")
+                summary_df.to_csv(summary_file, index=False)
+                logger.info(f"Saved PCA components summary to: {summary_file}")
+                
+                # Print key findings to console
+                print(f"\nPCA Analysis Results:")
+                print(f"- {n_components_80} components explain 80% of variance")
+                print(f"- {n_components_95} components explain 95% of variance")
+                print(f"\nTop contributors to first {min(5, key_components)} components:")
+                
+                for i in range(min(5, key_components)):
+                    pc_name = f'PC{i+1}'
+                    loadings = loadings_df[pc_name].abs().sort_values(ascending=False)
+                    top_3 = loadings.head(3)
+                    print(f"  {pc_name} ({explained_variance_ratio[i]:.1%} variance): {', '.join([f'{feat}({val:.2f})' for feat, val in top_3.items()])}")
+                
+                pca_results.update({
+                    'loadings_df': loadings_df,
+                    'summary_df': summary_df
+                })
+                
+            except Exception as e:
+                logger.exception(f"Failed to analyze PCA component loadings: {e}")
+        
+        return pca_results
         
     except Exception as e:
         logger.exception(f"Failed to create PCA plot: {e}")
