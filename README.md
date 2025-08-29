@@ -106,29 +106,28 @@ reference_levels:
 | `--all`              | No       | Show all results, not just significant ones                        |
 | `--save-plots`       | No       | Save figures to PNG instead of showing them                        |
 
+
 ## Programmatic Usage
 
-You can also import and run the analysis from Python:
+You can also run the analysis from Python by loading your YAML config and calling the main function:
 
 ```python
-from trend_analysis.config import config
+import yaml
 from trend_analysis.main import main
 
-config["csv_path"] = "/path/to/data.csv"
-config["input_categoricals"] = ["Category1", "Category2"]
-config["input_numerics"] = ["Numeric1", "Numeric2"]
-config["output_targets"] = ["Target1", "Target2"]
+with open("trend_analysis/config.yaml", "r") as f:
+  config = yaml.safe_load(f)
 main(config)
 ```
 
+
 ## Output
 
-- Printed summaries of regression and ANOVA
-- Cross-validated R-squared scores and error metrics
-- SHAP summaries and feature importances
-- Automatically transformed skewed variables
-- Plots (interactive or saved as PNG)
-- Top interactions and residual diagnostics
+- All analysis results (regression, ANOVA, SHAP, PDP, etc.) are saved as CSV or TXT files in the `output/` directory.
+- No results are printed to the terminal or saved as images by default; all numeric results are machine-readable.
+- Plots (e.g., feature importances, PDPs, correlation matrices) can be generated from the CSV outputs using the provided `plotter.py` script.
+- Robust error handling: if analysis for one output target fails, the pipeline continues for the rest, and errors are logged in `analysis.log`.
+
 
 ## Project Structure
 
@@ -138,17 +137,34 @@ trend_analysis/
 │   ├── __init__.py
 │   ├── main.py
 │   ├── cli.py
-│   ├── config.py
 │   ├── preprocess.py
 │   ├── visualization.py
 │   ├── modeling.py
 │   ├── shap_analysis.py
 │   ├── pdp_analysis.py
 │   ├── anova.py
+│   ├── utils.py
 │   └── config.yaml
-├── setup.py
+├── plotter.py
+├── summary.py
+├── requirements.txt
 ├── README.md
+├── LICENSE
+├── output/
+│   ├── analysis_results.txt
+│   ├── data_head.csv
+│   ├── correlation_matrix.png
+│   ├── pca_variance.png
+│   └── ... (all result CSVs)
 ```
+
+
+## Notes
+
+- The only configuration file used is `config.yaml` (YAML format). There is no `config.py` in use.
+- The CLI (`trend-analysis` or `python -m trend_analysis.cli`) is the main entry point for analysis.
+- All results are output as CSV/txt for downstream analysis or plotting.
+- See `plotter.py` and `summary.py` for examples of how to visualize or aggregate results from the output files.
 
 ## License
 

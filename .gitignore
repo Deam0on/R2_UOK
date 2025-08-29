@@ -1,0 +1,4 @@
+/trend_analysis/__pycache__
+*.log
+/output
+/trend_analysis/config.yaml

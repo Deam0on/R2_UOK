@@ -1,18 +1,65 @@
-csv_path: /content/data/asmodeus.csv
+# csv_path: /content/data/asmodeus.csv
+# input_categoricals:
+#   - API
+#   - Stabilizers
+#   - Mixing chambers
+# input_numerics:
+#   - Flowrate
+# output_targets:
+#   - Mean num nm
+#   - Mean vol nm
+# dropna_required: true
+# use_wls: true
+# significant_only: true
+# reference_levels:
+#   API: Indometacin
+#   Stabilizers: P188
+#   Mixing chambers: FDmixer
+# generate_summary: true
+
+# Database connection info (replace with your actual credentials)
+db_host: localhost
+db_port: 5433
+db_name: devdb
+db_user: postgres
+db_password: superpass
+
+# SQL query to extract analysis-ready data
+sql_query: |
+  SELECT
+    r.id AS run_id,
+    r.lnp_assembly,
+    r.lr_cargo,
+    r.lr_flow_rate,
+    r.ll_cargo,
+    r.ll_flow_rate,
+    r.np_ratio,
+    r.pd_buffer,
+    r.pd_flow_rate,
+    dls.diameter_nm,
+    dls.pdindex,
+    ent.entrapment
+  FROM run r
+  LEFT JOIN dls_data dls ON dls.lnps_id = (
+      SELECT id FROM lnps WHERE run_id = r.id LIMIT 1
+  ) AND dls.ignore_data = false
+  LEFT JOIN entrapment ent ON ent.lnps_id = (
+      SELECT id FROM lnps WHERE run_id = r.id LIMIT 1
+  ) AND ent.ignore_data = false
+  WHERE r.lnp_assembly IS NOT NULL
+
+# For DB use, set these columns:
 input_categoricals:
-  - API
-  - Stabilizers
-  - Mixing chambers
+  - lnp_assembly
+  - lr_cargo
+  - ll_cargo
+  - pd_buffer
 input_numerics:
-  - Flowrate
+  - lr_flow_rate
+  - ll_flow_rate
+  - np_ratio
+  - pd_flow_rate
 output_targets:
-  - Mean num nm
-  - Mean vol nm
-dropna_required: true
-use_wls: true
-significant_only: true
-reference_levels:
-  API: Indometacin
-  Stabilizers: P188
-  Mixing chambers: FDmixer
-generate_summary: true
+  - diameter_nm
+  - pdindex
+  - entrapment

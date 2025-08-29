@@ -10,8 +10,8 @@ def show_correlation(df, input_numerics, save_plots=False):
         plt.tight_layout()
         if save_plots:
             plt.savefig("correlation_matrix.png")
-        else:
-            plt.show()
+    # else:
+    #     plt.show()
 
 def plot_pca(X, pca, save_plots=False):
     X_pca = pca.fit_transform(X)
@@ -23,5 +23,5 @@ def plot_pca(X, pca, save_plots=False):
     plt.tight_layout()
     if save_plots:
         plt.savefig("pca_variance.png")
-    else:
-        plt.show()
+    # else:
+    #     plt.show()

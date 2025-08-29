@@ -8,3 +8,5 @@ statsmodels
 patsy
 pyyaml
 tabulate
+psycopg2
+sqlalchemy

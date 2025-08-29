@@ -1,6 +1,10 @@
 ### main.py (modified)
 
 from trend_analysis.config import config as default_config
+import logging
+import numpy as np
+import sys
+from trend_analysis.config import config as default_config
 from trend_analysis.utils import (
     print_table, print_summary, format_feature_name,
     print_top_features, print_model_metrics, setup_logger, check_imbalance,
@@ -15,106 +19,183 @@ from trend_analysis.anova import run_anova
 from sklearn.decomposition import PCA
 from sklearn.model_selection import cross_val_score
 from sklearn.impute import SimpleImputer
-import pandas as pd
-import logging
 from sklearn.metrics import root_mean_squared_error
-import numpy as np
 
 def main(config=None):
+    print("[DEBUG] Entered main()")
+    # Enhanced logging setup: file and console
     setup_logger()
-    if config is None:
-        config = default_config
+    logger = logging.getLogger()
+    # Remove all handlers associated with the root logger object (avoid duplicate logs)
+    for handler in logger.handlers[:]:
+        logger.removeHandler(handler)
+    # Add file handler
+    file_handler = logging.FileHandler('analysis.log')
+    file_handler.setLevel(logging.INFO)
+    file_formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s')
+    file_handler.setFormatter(file_formatter)
+    logger.addHandler(file_handler)
+    # Add console handler
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
+    console_formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s')
+    console_handler.setFormatter(console_formatter)
+    logger.addHandler(console_handler)
+    logger.setLevel(logging.INFO)
 
-    df = load_and_clean(
-        config["csv_path"],
-        config["input_categoricals"] + config["input_numerics"],
-        config["output_targets"],
-        dropna_required=config.get("dropna_required", True)
-    )
+    logger.info("Starting trend analysis main function.")
+    try:
+        if config is None:
+            raise ValueError("No config provided to main(). Please use the CLI or pass a config dict.")
 
-    if not config.get("dropna_required", False):
-        imputer = SimpleImputer(strategy="mean")
-        df[config["input_numerics"]] = imputer.fit_transform(df[config["input_numerics"]])
+        df = load_and_clean(
+            config.get("csv_path"),
+            config["input_categoricals"] + config["input_numerics"],
+            config["output_targets"],
+            dropna_required=config.get("dropna_required", True),
+            config=config
+        )
+        logger.info(f"Loaded dataframe with shape: {df.shape}")
+        logger.debug(f"DataFrame columns: {df.columns.tolist()}")
+        logger.debug(f"First 5 rows:\n{df.head()}\n")
+        import os
+        output_dir = 'output'
+        os.makedirs(output_dir, exist_ok=True)
+        results_path = os.path.join(output_dir, 'analysis_results.txt')
+        # Save head of dataframe to results file and as CSV
+        df.head().to_csv(os.path.join(output_dir, 'data_head.csv'), index=False)
+        with open(results_path, 'w', encoding='utf-8') as results_file:
+            results_file.write('First 5 rows of data:\n')
+            results_file.write(df.head().to_string())
+            results_file.write('\n\n')
 
-    for col in config["input_categoricals"]:
-        ref = str(config.get("reference_levels", {}).get(col))
-        if ref:
-            categories = sorted([str(x) for x in df[col].dropna().unique()])
-            if ref not in categories:
-                print(f"⚠️  Warning: Reference '{ref}' not found in column '{col}'")
-            else:
-                categories.remove(ref)
-                df[col] = pd.Categorical(df[col].astype(str), categories=[ref] + categories, ordered=True)
+        if not config.get("dropna_required", False):
+            logger.info("Imputing missing values for numeric columns.")
+            imputer = SimpleImputer(strategy="mean")
+            df[config["input_numerics"]] = imputer.fit_transform(df[config["input_numerics"]])
 
-    if config.get("run_imbalance_check", False):
-        skewed_cols = check_imbalance(df, config)
-        if skewed_cols:
-            print(f"→ Transforming skewed columns: {', '.join(skewed_cols)}")
-            df = transform_skewed_columns(df, config)
+        logger.info("Processing categorical reference levels...")
+        for col in config["input_categoricals"]:
+            ref = str(config.get("reference_levels", {}).get(col))
+            logger.debug(f"Reference for {col}: {ref}")
 
-    preprocessor = build_preprocessor(config["input_categoricals"], config["input_numerics"])
-    X = preprocessor.fit_transform(df[config["input_categoricals"] + config["input_numerics"]])
-    feature_names = preprocessor.get_feature_names_out()
+        if config.get("run_imbalance_check", False):
+            logger.info("Checking for feature imbalance...")
+            skewed_cols = check_imbalance(df, config)
+            logger.debug(f"Skewed columns: {skewed_cols}")
 
-    show_correlation(df, config["input_numerics"], config.get("save_plots", False))
-    plot_pca(X, PCA(), config.get("save_plots", False))
+        logger.info("Building preprocessor and transforming features...")
+        preprocessor = build_preprocessor(config["input_categoricals"], config["input_numerics"])
+        X = preprocessor.fit_transform(df[config["input_categoricals"] + config["input_numerics"]])
+        feature_names = preprocessor.get_feature_names_out()
+        logger.debug(f"Feature names after preprocessing: {feature_names}")
 
-    target_summaries = {}
+        logger.info("Plotting correlation matrix...")
+        show_correlation(df, config["input_numerics"], save_plots=True)
+        # Move correlation_matrix.png to output dir if it exists
+        if os.path.exists('correlation_matrix.png'):
+            os.replace('correlation_matrix.png', os.path.join(output_dir, 'correlation_matrix.png'))
+        logger.info("Plotting PCA...")
+        plot_pca(X, PCA(), save_plots=True)
+        if os.path.exists('pca_variance.png'):
+            os.replace('pca_variance.png', os.path.join(output_dir, 'pca_variance.png'))
 
-    for output in config["output_targets"]:
-        y = df[output]
-        target_summary = {}
+        target_summaries = {}
 
-        print_summary(f"Linear Regression for '{output}'", [])
-        model = fit_linear_model(X, y, df, output, config["use_wls"], config["significant_only"])
+        # Redirect all print output to results file
+        import io
+        orig_stdout = sys.stdout
+        with open(results_path, 'a', encoding='utf-8') as results_file:
+            sys.stdout = results_file
+            try:
+                for output in config["output_targets"]:
+                    try:
+                        logger.info(f"Processing output target: {output}")
+                        if output not in df.columns:
+                            logger.error(f"Output target '{output}' not found in dataframe columns. Skipping.")
+                            continue
+                        y = df[output]
+                        if y.isnull().all():
+                            logger.error(f"All values for output target '{output}' are NaN. Skipping.")
+                            continue
+                        target_summary = {}
 
-        coef_table = model.summary2().tables[1]
-        new_index = ["Intercept"] + list(feature_names)
-        coef_table.index = new_index[: len(coef_table)]
-        coef_table.index = clean_linear_terms(coef_table.index)
+                        logger.info(f"Fitting linear model for {output}...")
+                        print_summary(f"Linear Regression for '{output}'", [])
+                        try:
+                            model = fit_linear_model(X, y, df, output, config["use_wls"], config["significant_only"])
+                        except Exception as e:
+                            logger.exception(f"Failed to fit linear model for {output}: {e}")
+                            continue
 
-        ref_terms = [f"{col} = {config['reference_levels'][col]}" for col in config["input_categoricals"] if col in config.get("reference_levels", {})]
-        if ref_terms:
-            if "Intercept" in coef_table.index:
-                coef_table.rename(index={"Intercept": f"Intercept ({', '.join(ref_terms)})"}, inplace=True)
+                        coef_table = model.summary2().tables[1]
+                        new_index = ["Intercept"] + list(feature_names)
+                        coef_table.index = new_index[: len(coef_table)]
+                        coef_table.index = clean_linear_terms(coef_table.index)
+                        logger.debug(f"Coefficients table for {output}:\n{coef_table}\n")
 
-        if config["significant_only"]:
-            coef_table = coef_table[coef_table["P>|t|"] < 0.05]
+                        ref_terms = [f"{col} = {config['reference_levels'][col]}" for col in config["input_categoricals"] if col in config.get("reference_levels", {})]
+                        if ref_terms:
+                            logger.debug(f"Reference terms for {output}: {ref_terms}")
 
-        print_table(coef_table, title="Significant Coefficients (p < 0.05)")
-        target_summary["coef_table"] = coef_table
+                        if config["significant_only"]:
+                            logger.debug(f"Significant only flag is set for {output}.")
 
-        if config.get("run_rf", False):
-            rf, _ = fit_random_forest(X, y)
-            scores = None
+                        print_table(coef_table, title="Significant Coefficients (p < 0.05)")
 
-            if config.get("run_cv", False):
-                scores = cross_val_score(rf, X, y, cv=5, scoring='r2')
-                print_summary("Random Forest Cross-Validation", [
-                    f"Mean R²: {scores.mean():.3f}",
-                    f"Std Dev : {scores.std():.3f}"
-                ])
-                target_summary["cv_scores"] = scores
+                        # Run all available analyses and save plots
+                        logger.info(f"Running Random Forest for {output}...")
+                        try:
+                            rf, scores = fit_random_forest(X, y)
+                            print_summary(f"Random Forest CV scores for '{output}'", [str(scores)])
+                        except Exception as e:
+                            logger.exception(f"Failed to fit Random Forest for {output}: {e}")
+                            continue
 
-            rf.fit(X, y)
-            if config.get("run_eval", False):
-                y_pred = rf.predict(X)
-                print_model_metrics(y, y_pred)
-                target_summary["metrics"] = {
-                    "r2": rf.score(X, y),
-                    "mae": np.mean(np.abs(y - y_pred)),
-                    "rmse": root_mean_squared_error(y, y_pred)
-                }
+                        logger.info(f"Running SHAP analysis for {output}...")
+                        try:
+                            from trend_analysis.shap_analysis import explain_shap
+                            mean_shap, top_idx, shap_values = explain_shap(rf, X, feature_names, significant_only=False, save_plots=True, check_additivity=False)
+                        except TypeError:
+                            mean_shap, top_idx, shap_values = explain_shap(rf, X, feature_names, significant_only=False, save_plots=True)
+                        except Exception as e:
+                            logger.exception(f"Failed SHAP analysis for {output}: {e}")
+                            continue
+                        for fname in ["shap_summary.png", "shap_summary_all.png"]:
+                            if os.path.exists(fname):
+                                os.replace(fname, os.path.join(output_dir, fname))
 
-            if config.get("run_shap", False):
-                mean_shap, top_idx, shap_values = explain_shap(rf, X, feature_names, config["significant_only"], config.get("save_plots", False))
-                print_top_features(abs(shap_values), feature_names, top_n=5)
-                shap_top = []
-                mean_abs = np.abs(shap_values).mean(axis=0)
-                for idx in top_idx:
-                    dir = "positive" if np.corrcoef(X[:, idx], y)[0, 1] > 0 else "negative"
-                    shap_top.append((feature_names[idx], mean_abs[idx], dir))
-                target_summary["shap_top"] = shap_top
+                        logger.info(f"Running PDP for {output}...")
+                        try:
+                            plot_pdp(rf, X, feature_names, top_idx, significant_only=False, save_plots=True)
+                        except Exception as e:
+                            logger.exception(f"Failed PDP for {output}: {e}")
+
+                        logger.info(f"Running ANOVA for {output}...")
+                        try:
+                            anova_results = run_anova(df, output, config["input_categoricals"], config["input_numerics"])
+                            from trend_analysis.utils import clean_anova_terms
+                            for depth, model in anova_results.items():
+                                anova_table = model.summary2().tables[1]
+                                anova_table.index = clean_anova_terms(anova_table.index)
+                                anova_csv = os.path.join(output_dir, f'anova_{output}_depth{depth}.csv')
+                                anova_table.to_csv(anova_csv)
+                            print_summary(f"ANOVA results for '{output}'", [str(anova_results)])
+                        except Exception as e:
+                            logger.exception(f"Failed ANOVA for {output}: {e}")
+                    except Exception as e:
+                        logger.exception(f"Exception occurred during analysis for output target '{output}': {e}")
+                        continue
+            finally:
+                sys.stdout = orig_stdout
+
+        logger.info("Analysis completed successfully.")
+        # Only call generate_auto_summary if it is enabled and target_summaries is populated
+        if config.get("generate_summary", False) and target_summaries:
+            generate_auto_summary(target_summaries, config)
+    except Exception as e:
+        logger.exception(f"Exception occurred during analysis: {e}")
+        print(f"Exception occurred: {e}")
 
         if config.get("run_anova", False):
             anova_models = run_anova(df, output, config["input_categoricals"], config["input_numerics"])

@@ -1,0 +1,26 @@
+
+
+# Database connection info (replace with your actual credentials)
+db_host: localhost
+db_port: 1111
+db_name: db_name
+db_user: db_user
+db_password: db_password
+
+# SQL query to extract analysis-ready data
+sql_query: |
+  SELECT
+
+# For DB use, set these columns:
+input_categoricals:
+  - input_categoricals_1
+  - input_categoricals_2
+  - input_categoricals_3
+input_numerics:
+  - input_numerics_1
+  - input_numerics_2
+  - input_numerics_3
+output_targets:
+  - output_targets_1
+  - output_targets_2
+  - output_targets_3

@@ -64,6 +64,14 @@ def main():
     config["generate_summary"] = args.generate_summary
 
     run_main(config)
+    # Automatically run the plotter after main analysis
+    import subprocess
+    import sys
+    plotter_path = os.path.join(os.path.dirname(__file__), '..', 'plotter.py')
+    plotter_path = os.path.abspath(plotter_path)
+    if os.path.exists(plotter_path):
+        print("\n[INFO] Plotting all outputs using plotter.py...\n")
+        subprocess.run([sys.executable, plotter_path])
 
 if __name__ == "__main__":
     main()
