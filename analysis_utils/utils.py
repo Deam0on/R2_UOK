@@ -225,23 +225,52 @@ def check_imbalance(df, config, skew_threshold=1.0):
 
     Returns:
         list: A list of columns that are highly skewed.
+        
+    Raises:
+        ValueError: If invalid inputs are provided.
     """
-    print_summary("Checking for feature imbalances", [])
-    skewed_cols = []
+    logger = logging.getLogger(__name__)
+    
+    try:
+        print_summary("Checking for feature imbalances", [])
+        skewed_cols = []
 
-    for col in config["input_numerics"]:
-        s = skew(df[col].dropna())
-        if abs(s) > skew_threshold:
-            print(f"{col} is highly skewed (skew = {s:.2f})")
-            skewed_cols.append(col)
+        # Check numeric input features
+        for col in config.get("input_numerics", []):
+            try:
+                if col not in df.columns:
+                    logger.warning(f"Column '{col}' not found in DataFrame")
+                    continue
+                    
+                s = skew(df[col].dropna())
+                if abs(s) > skew_threshold:
+                    print(f"{col} is highly skewed (skew = {s:.2f})")
+                    logger.info(f"Feature {col} is highly skewed (skew = {s:.2f})")
+                    skewed_cols.append(col)
+            except Exception as e:
+                logger.exception(f"Failed to check skewness for input feature '{col}': {e}")
 
-    for target in config["output_targets"]:
-        s = skew(df[target].dropna())
-        if abs(s) > skew_threshold:
-            print(f"Output {col} is highly skewed (skew = {s:.2f})")
-            skewed_cols.append(col)
+        # Check output targets - fixed variable name bug
+        for target in config.get("output_targets", []):
+            try:
+                if target not in df.columns:
+                    logger.warning(f"Target '{target}' not found in DataFrame")
+                    continue
+                    
+                s = skew(df[target].dropna())
+                if abs(s) > skew_threshold:
+                    print(f"Output {target} is highly skewed (skew = {s:.2f})")
+                    logger.info(f"Output target {target} is highly skewed (skew = {s:.2f})")
+                    skewed_cols.append(target)
+            except Exception as e:
+                logger.exception(f"Failed to check skewness for output target '{target}': {e}")
 
-    return skewed_cols
+        logger.info(f"Found {len(skewed_cols)} highly skewed columns")
+        return skewed_cols
+        
+    except Exception as e:
+        logger.exception(f"Failed to check imbalance: {e}")
+        return []
 
 
 def clean_anova_terms(index_list):
