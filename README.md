@@ -128,20 +128,19 @@ sql_query: "SELECT * FROM your_table WHERE condition = 'value'"
 
 # Column Specifications
 input_categoricals:
-  - lnp_assembly
-  - lr_cargo
-  - ll_cargo
-  - pd_buffer
+  - input_categoricals_1
+  - input_categoricals_2
+  - input_categoricals_3
   
 input_numerics:
-  - np_ratio
-  - temperature
-  - ph_level
+  - input_numerics_1
+  - input_numerics_2
+  - input_numerics_3
   
 output_targets:
-  - diameter_nm
-  - pdindex
-  - efficiency
+  - output_targets_1
+  - output_targets_2
+  - output_targets_3
 
 # Data Processing Options
 dropna_required: true
@@ -149,8 +148,8 @@ min_group_size: 10
 
 # Reference Level Settings (optional)
 reference_levels:
-  lnp_assembly: "False"
-  lr_cargo: "Other"
+  input_numerics_1: 50
+  input_categoricals_1: "Other"
   
 # Analysis Configuration
 run_rf: true          # Random Forest modeling
