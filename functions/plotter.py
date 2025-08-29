@@ -1,9 +1,14 @@
-import os
-import glob
-import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
+"""
+Plotter script for visualizing outputs from analysis results in the output directory.
+Generates plots for SHAP importances, PDPs, regression coefficients, ANOVA tables, and correlation matrices.
+"""
 
+import glob
+import os
+
+import matplotlib.pyplot as plt
+import pandas as pd
+import seaborn as sns
 
 # Number of top features to plot (change as needed)
 TOP_N = 20
@@ -28,7 +33,7 @@ for pdp_file in glob.glob(os.path.join(output_dir, "pdp_*.csv")):
         continue
     df = pd.read_csv(pdp_file)
     feature = df.columns[0]
-    plt.figure()
+    plt.figure(figsize=(14, 7))
     plt.plot(df[feature], df["partial_dependence"])
     plt.xlabel(feature)
     plt.ylabel("Partial Dependence")
@@ -39,7 +44,7 @@ for pdp_file in glob.glob(os.path.join(output_dir, "pdp_*.csv")):
 # 3. 2D PDPs
 for pdp2d_file in glob.glob(os.path.join(output_dir, "pdp_*_*.csv")):
     df = pd.read_csv(pdp2d_file, index_col=0)
-    plt.figure()
+    plt.figure(figsize=(14, 7))
     sns.heatmap(df, cmap="viridis")
     plt.title(f"2D PDP: {df.index.name} vs {df.columns.name or df.columns[0]}")
     plt.xlabel(df.columns.name or df.columns[0])
@@ -53,7 +58,7 @@ for reg_file in glob.glob(os.path.join(output_dir, "linear_regression_*.csv")):
     if "Intercept" in df.index:
         df = df.drop("Intercept")
     df = df.sort_values("Coef.", key=abs, ascending=False).head(TOP_N)
-    plt.figure()
+    plt.figure(figsize=(14, 7))
     df["Coef."].plot(kind="bar")
     plt.title(f"Top {TOP_N} Regression Coefficients: {os.path.basename(reg_file)}")
     plt.ylabel("Coefficient")
@@ -68,9 +73,11 @@ for anova_file in glob.glob(os.path.join(output_dir, "anova_*_depth*.csv")):
         sig = df[df["P>|t|"] < 0.05]
         sig = sig.sort_values("Coef.", key=abs, ascending=False).head(TOP_N)
         if not sig.empty:
-            plt.figure()
+            plt.figure(figsize=(14, 7))
             sig["Coef."].plot(kind="bar")
-            plt.title(f"Top {TOP_N} ANOVA Significant Coefficients: {os.path.basename(anova_file)}")
+            plt.title(
+                f"Top {TOP_N} ANOVA Significant Coefficients: {os.path.basename(anova_file)}"
+            )
             plt.ylabel("Coefficient")
             plt.tight_layout()
             plt.show()

@@ -1,1 +1,0 @@
-# trend_analysis package with humanized outputs

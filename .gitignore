@@ -2,3 +2,6 @@
 *.log
 /output
 /trend_analysis/config.yaml
+/analysis_utils/__pycache__
+/config/__pycache__
+/functions/__pycache__

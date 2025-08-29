@@ -1,17 +1,27 @@
-### utils.py (updated)
+"""
+General utility functions for analysis pipeline, logging, and output formatting.
+"""
 
-from tabulate import tabulate
 import logging
-from  sklearn import metrics
-from scipy.stats import skew
-from sklearn.metrics import r2_score, mean_absolute_error, root_mean_squared_error
 import re
-from tabulate import tabulate
+
 import numpy as np
 import pandas as pd
+from scipy.stats import skew
+from sklearn import metrics
+from sklearn.metrics import mean_absolute_error, r2_score, root_mean_squared_error
 from sklearn.preprocessing import PowerTransformer
+from tabulate import tabulate
+
 
 def generate_auto_summary(target_summaries, config):
+    """
+    Generate and print an auto-summary for the target variables in the analysis.
+
+    Args:
+        target_summaries (dict): A dictionary containing summary data for each target variable.
+        config (dict): Configuration settings for the analysis, including reference levels.
+    """
     print("\n===== AUTO-GENERATED SUMMARY =====\n")
 
     # Print reference levels if available
@@ -32,7 +42,11 @@ def generate_auto_summary(target_summaries, config):
 
         ### Regression Coeff Summary
         print("\n- Linear Model Interpretation:")
-        intercept_label = [idx for idx in data["coef_table"].index if idx.lower().startswith("intercept")]
+        intercept_label = [
+            idx
+            for idx in data["coef_table"].index
+            if idx.lower().startswith("intercept")
+        ]
         if intercept_label:
             intercept = data["coef_table"].loc[intercept_label[0], "Coef."]
             print(f"  Baseline prediction (intercept): {intercept:.2f}")
@@ -52,36 +66,83 @@ def generate_auto_summary(target_summaries, config):
             else:
                 effect = f"{i} (p = {row['P>|t|']:.3f})"
             print(effect)
-        if any((data["anova_table"]["P>|t|"] > 0.05) & (data["anova_table"]["P>|t|"] < 0.1)):
+        if any(
+            (data["anova_table"]["P>|t|"] > 0.05) & (data["anova_table"]["P>|t|"] < 0.1)
+        ):
             print("  Note: Some terms were marginally significant (0.05 < p < 0.1)")
 
         ### Model Fit Summary
         print("\n- Model Performance:")
-        print(f"  R² = {data['metrics']['r2']:.3f}, MAE = {data['metrics']['mae']:.2f}, RMSE = {data['metrics']['rmse']:.2f}")
+        print(
+            f"  R² = {data['metrics']['r2']:.3f}, MAE = {data['metrics']['mae']:.2f}, RMSE = {data['metrics']['rmse']:.2f}"
+        )
         if "cv_scores" in data and data["cv_scores"] is not None:
-            print(f"  Random Forest CV R² = {np.mean(data['cv_scores']):.3f} ± {np.std(data['cv_scores']):.3f}")
+            print(
+                f"  Random Forest CV R² = {np.mean(data['cv_scores']):.3f} ± {np.std(data['cv_scores']):.3f}"
+            )
 
         ### Skewness Note
         for col, val in data.get("skew_info", {}).items():
             if abs(val) > 1:
-                print(f"  Note: {col} was highly skewed (skew = {val:.2f}) and may have been transformed.")
+                print(
+                    f"  Note: {col} was highly skewed (skew = {val:.2f}) and may have been transformed."
+                )
 
         print("\n------------------------------------\n")
 
+
 def print_table(df, title=None, floatfmt=".4f"):
+    """
+    Print a DataFrame as a formatted table.
+
+    Args:
+        df (DataFrame): The DataFrame to print.
+        title (str, optional): An optional title for the table.
+        floatfmt (str, optional): Format string for floating-point numbers.
+    """
     if title:
         print(f"\n{title}")
     print(tabulate(df, headers="keys", floatfmt=floatfmt, tablefmt="pretty"))
 
+
 def print_summary(title, lines):
+    """
+    Print a formatted summary section.
+
+    Args:
+        title (str): The title of the summary section.
+        lines (list): A list of lines to include in the summary.
+    """
     print(f"\n{'='*len(title)}\n{title}\n{'='*len(title)}")
     for line in lines:
         print(f"  - {line}")
 
+
 def format_feature_name(name):
+    """
+    Format a feature name for display.
+
+    Args:
+        name (str): The raw feature name.
+
+    Returns:
+        str: The formatted feature name.
+    """
     return name.replace(":", " × ").replace("_", " ").title()
 
+
 def print_top_features(shap_values, feature_names, top_n=5):
+    """
+    Print the top N most impactful features based on SHAP values.
+
+    Args:
+        shap_values (array): The SHAP values for the features.
+        feature_names (array): The names of the features.
+        top_n (int, optional): The number of top features to display.
+
+    Returns:
+        array: Indices of the top features.
+    """
     mean_shap = shap_values.mean(axis=0)
     top_idx = mean_shap.argsort()[-top_n:][::-1]
     print(f"\nTop {top_n} most impactful features by SHAP:")
@@ -90,7 +151,17 @@ def print_top_features(shap_values, feature_names, top_n=5):
         print(f"{rank}. {fname} (mean SHAP = {mean_shap[idx]:.4f})")
     return top_idx
 
+
 def clean_linear_terms(index_list):
+    """
+    Clean and format linear term names for display.
+
+    Args:
+        index_list (list): The list of term names (e.g., from a regression model).
+
+    Returns:
+        list: The cleaned and formatted term names.
+    """
     cleaned = []
     for name in index_list:
         if name == "Intercept":
@@ -108,22 +179,53 @@ def clean_linear_terms(index_list):
             cleaned.append(name)
     return cleaned
 
+
 def print_model_metrics(y_true, y_pred):
-    print_summary("Model Evaluation", [
-        f"R² = {r2_score(y_true, y_pred):.3f}",
-        f"MAE = {mean_absolute_error(y_true, y_pred):.3f}",
-        f"RMSE = {root_mean_squared_error(y_true, y_pred):.3f}"
-    ])
+    """
+    Print model evaluation metrics: R², MAE, and RMSE.
+
+    Args:
+        y_true (array): True target values.
+        y_pred (array): Predicted values from the model.
+    """
+    print_summary(
+        "Model Evaluation",
+        [
+            f"R² = {r2_score(y_true, y_pred):.3f}",
+            f"MAE = {mean_absolute_error(y_true, y_pred):.3f}",
+            f"RMSE = {root_mean_squared_error(y_true, y_pred):.3f}",
+        ],
+    )
+
 
 def setup_logger(logfile="analysis.log", level=logging.INFO):
+    """
+    Set up the logging configuration for the analysis.
+
+    Args:
+        logfile (str, optional): The log file name.
+        level (int, optional): The logging level (e.g., logging.INFO).
+    """
     logging.basicConfig(
         filename=logfile,
         level=level,
-        format='%(asctime)s [%(levelname)s] %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S'
+        format="%(asctime)s [%(levelname)s] %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
     )
 
+
 def check_imbalance(df, config, skew_threshold=1.0):
+    """
+    Check for feature and target variable imbalance based on skewness.
+
+    Args:
+        df (DataFrame): The input DataFrame containing features and targets.
+        config (dict): Configuration settings, including input and output variable lists.
+        skew_threshold (float, optional): The skewness threshold for identifying imbalance.
+
+    Returns:
+        list: A list of columns that are highly skewed.
+    """
     print_summary("Checking for feature imbalances", [])
     skewed_cols = []
 
@@ -141,7 +243,17 @@ def check_imbalance(df, config, skew_threshold=1.0):
 
     return skewed_cols
 
+
 def clean_anova_terms(index_list):
+    """
+    Clean and format ANOVA term names for display.
+
+    Args:
+        index_list (list): The list of ANOVA term names.
+
+    Returns:
+        list: The cleaned and formatted term names.
+    """
     cleaned = []
     for i in index_list:
         if "Intercept" in i:
@@ -149,14 +261,14 @@ def clean_anova_terms(index_list):
             continue
 
         # Replace Q("X") → X
-        i = re.sub(r'Q\("([^"]+)"\)', r'\1', i)
+        i = re.sub(r'Q\("([^"]+)"\)', r"\1", i)
 
         # Replace C("X") → X
-        i = re.sub(r'C\("([^"]+)"\)', r'\1', i)
+        i = re.sub(r'C\("([^"]+)"\)', r"\1", i)
 
         # Replace [T.X] or [X] → = X
-        i = re.sub(r'\[T\.(.*?)\]', r'= \1', i)
-        i = re.sub(r'\[(.*?)\]', r'= \1', i)
+        i = re.sub(r"\[T\.(.*?)\]", r"= \1", i)
+        i = re.sub(r"\[(.*?)\]", r"= \1", i)
 
         # Replace interaction colons with ×
         i = i.replace(":", " × ")
@@ -165,10 +277,18 @@ def clean_anova_terms(index_list):
 
     return cleaned
 
+
 def transform_skewed_columns(df, config, skew_threshold=1.0):
     """
     Detect and transform highly skewed numeric columns using Yeo-Johnson.
-    Returns a new DataFrame with transformed columns.
+
+    Args:
+        df (DataFrame): The input DataFrame containing features and targets.
+        config (dict): Configuration settings, including input and output variable lists.
+        skew_threshold (float, optional): The skewness threshold for identifying imbalance.
+
+    Returns:
+        DataFrame: A new DataFrame with transformed columns.
     """
     pt = PowerTransformer(method="yeo-johnson")
     numeric_cols = config["input_numerics"] + config["output_targets"]
@@ -183,5 +303,3 @@ def transform_skewed_columns(df, config, skew_threshold=1.0):
             df[col + "_transformed"] = transformed.flatten()
 
     return df
-
-

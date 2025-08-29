@@ -40,13 +40,13 @@ pip install .
 ### Minimal example
 
 ```bash
-trend-analysis --csv path/to/data.csv --categoricals Category1 --numerics Numeric1 --targets Target1
+python functions/cli.py --csv path/to/data.csv --categoricals Category1 --numerics Numeric1 --targets Target1
 ```
 
 ### Full example
 
 ```bash
-trend-analysis \
+python functions/cli.py \
   --csv path/to/data.csv \
   --categoricals Category1 Category2 Category3 \
   --numerics Numeric1 Numeric2 \
@@ -59,7 +59,7 @@ trend-analysis \
 ### Using a YAML configuration
 
 ```bash
-trend-analysis --config config.yaml
+python -m functions/cli.py --config config/config.yaml
 ```
 
 ## YAML Config Example
@@ -121,50 +121,61 @@ main(config)
 ```
 
 
+
 ## Output
 
-- All analysis results (regression, ANOVA, SHAP, PDP, etc.) are saved as CSV or TXT files in the `output/` directory.
+- All analysis results (regression, ANOVA, SHAP, PDP, etc.) are saved as CSV or TXT files in a timestamped subfolder under the `output/` directory (e.g., `output/results_YYYYMMDD_HHMMSS/`).
 - No results are printed to the terminal or saved as images by default; all numeric results are machine-readable.
 - Plots (e.g., feature importances, PDPs, correlation matrices) can be generated from the CSV outputs using the provided `plotter.py` script.
 - Robust error handling: if analysis for one output target fails, the pipeline continues for the rest, and errors are logged in `analysis.log`.
 
 
+
 ## Project Structure
 
 ```
-trend_analysis/
-├── trend_analysis/
+R2_UOK/
+├── analysis_utils/
 │   ├── __init__.py
-│   ├── main.py
-│   ├── cli.py
-│   ├── preprocess.py
-│   ├── visualization.py
-│   ├── modeling.py
-│   ├── shap_analysis.py
-│   ├── pdp_analysis.py
 │   ├── anova.py
+│   ├── modeling.py
+│   ├── pdp_analysis.py
+│   ├── preprocess.py
+│   ├── shap_analysis.py
 │   ├── utils.py
-│   └── config.yaml
-├── plotter.py
-├── summary.py
+├── config/
+│   ├── __init__.py
+│   ├── config.py
+│   ├── config.yaml
+│   ├── config_placeholder.yaml
+├── functions/
+│   ├── __init__.py
+│   ├── cli.py
+│   ├── main.py
+│   ├── plotter.py
+│   ├── summary.py
+│   ├── visualization.py
+├── output/
+│   ├── __init__.py
+│   ├── results_YYYYMMDD_HHMMSS/
+│   │   ├── analysis_results.txt
+│   │   ├── data_head.csv
+│   │   ├── ... (all result CSVs)
+├── analysis.log
 ├── requirements.txt
 ├── README.md
 ├── LICENSE
-├── output/
-│   ├── analysis_results.txt
-│   ├── data_head.csv
-│   ├── correlation_matrix.png
-│   ├── pca_variance.png
-│   └── ... (all result CSVs)
+├── .gitignore
+├── .gitattributes
 ```
-
 
 ## Notes
 
-- The only configuration file used is `config.yaml` (YAML format). There is no `config.py` in use.
-- The CLI (`trend-analysis` or `python -m trend_analysis.cli`) is the main entry point for analysis.
+- All new results are saved in timestamped subfolders under `output/` and are never overwritten or backed up.
+- The CLI entry point is `functions/cli.py`.
 - All results are output as CSV/txt for downstream analysis or plotting.
-- See `plotter.py` and `summary.py` for examples of how to visualize or aggregate results from the output files.
+- See `functions/plotter.py` and `functions/summary.py` for examples of how to visualize or aggregate results from the output files.
+- All imports are at the top of each file and all functions have docstrings for clarity and maintainability.
 
 ## License
 
